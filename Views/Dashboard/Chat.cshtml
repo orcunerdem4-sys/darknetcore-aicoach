@@ -24,8 +24,26 @@
     .typing-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: rgba(255,255,255,0.5); margin: 0 2px; animation: bounce 1.2s infinite; }
     .typing-dot:nth-child(2) { animation-delay: 0.2s; }
     .typing-dot:nth-child(3) { animation-delay: 0.4s; }
-    @@keyframes bounce { 0%,60%,100%{transform:translateY(0)} 30%{transform:translateY(-8px)} }
+    @keyframes bounce { 0%,60%,100%{transform:translateY(0)} 30%{transform:translateY(-8px)} }
     .suggestion-btn { font-size: 0.8rem; border-radius: 20px; }
+
+    /* Mobil Uyum (Responsive) */
+    @media (max-width: 768px) {
+        .chat-sidebar {
+            position: absolute;
+            z-index: 1050;
+            height: 100%;
+            transform: translateX(-100%);
+            transition: transform 0.3s ease;
+            background: rgba(15, 15, 20, 0.95); /* Yarı saydam koyu arka plan */
+            backdrop-filter: blur(10px);
+        }
+        .chat-sidebar.show {
+            transform: translateX(0);
+        }
+        .chat-bubble { max-width: 90%; }
+        /* Sidebar açıldığında arkadaki chat tıklanmasını/seçilmesini engellemek için overlay eklenebilir ama absolute menü yeterli. */
+    }
 </style>
 
 <div class="chat-page d-flex" style="height: calc(100vh - 70px); overflow: hidden;">
@@ -66,12 +84,15 @@
 
         <!-- Header -->
         <div class="chat-header d-flex align-items-center px-4 py-3" style="border-bottom:1px solid rgba(255,255,255,0.08); background:rgba(0,0,0,0.2);">
+            <button class="btn btn-sm btn-outline-secondary d-md-none me-3" id="sidebarToggleBtn" title="Sohbetler">
+                <i data-lucide="menu" size="20"></i>
+            </button>
             <div class="ai-avatar me-3" style="width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,#6c63ff,#48cae4); display:flex;align-items:center;justify-content:center;">
                 <i data-lucide="bot" size="20" class="text-white"></i>
             </div>
             <div>
                 <h6 class="mb-0 fw-bold">AI Coach</h6>
-                <small class="text-success">● Çevrimiçi — gemini-2.0-flash</small>
+                <small class="text-success">● Çevrimiçi</small>
             </div>
             <div class="ms-auto d-flex gap-2">
                 <button class="btn btn-sm btn-outline-secondary" id="clearContextBtn" title="Bağlam temizle">
@@ -165,8 +186,27 @@
     const chatFileInput = document.getElementById('chatFileInput');
     const contextInfo = document.getElementById('contextInfo');
     const typingIndicator = document.getElementById('typingIndicator');
+    const sidebarToggleBtn = document.getElementById('sidebarToggleBtn');
+    const chatSidebar = document.querySelector('.chat-sidebar');
 
     let attachedFileIds = [];
+
+    // Mobile Sidebar Toggle
+    if (sidebarToggleBtn && chatSidebar) {
+        sidebarToggleBtn.addEventListener('click', () => {
+            chatSidebar.classList.toggle('show');
+        });
+        
+        // Chat ana ekranına tıklandığında sidebar'ı kapat (eğer açıksa ve mobilse)
+        document.querySelector('.chat-main').addEventListener('click', (e) => {
+            if (window.innerWidth <= 768 && chatSidebar.classList.contains('show')) {
+                // Sadece Header'daki butona tıklamadığından emin ol
+                if(!e.target.closest('#sidebarToggleBtn')) {
+                    chatSidebar.classList.remove('show');
+                }
+            }
+        });
+    }
 
     // Attach File Logic
     if(attachBtn && chatFileInput) {
