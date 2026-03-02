@@ -1,0 +1,146 @@
+﻿@model IEnumerable<DarkNetCore.Models.TaskItem>
+
+@{
+    ViewData["Title"] = "Dashboard";
+}
+
+<div class="dashboard-container container-fluid p-4">
+    <!-- Top Stats Row -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="stat-card glass-panel p-3">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-light opacity-75 mb-1">Total Tasks</h6>
+                        <h3 class="mb-0">@Model.Count()</h3>
+                    </div>
+                    <i data-lucide="list-todo" class="text-primary" size="32"></i>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card glass-panel p-3">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-light opacity-75 mb-1">Pending</h6>
+                        <h3 class="mb-0">@Model.Count(x => !x.IsCompleted)</h3>
+                    </div>
+                    <i data-lucide="clock" class="text-warning" size="32"></i>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card glass-panel p-3">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-light opacity-75 mb-1">Completed</h6>
+                        <h3 class="mb-0">@Model.Count(x => x.IsCompleted)</h3>
+                    </div>
+                    <i data-lucide="check-circle" class="text-success" size="32"></i>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card glass-panel p-3">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-light opacity-75 mb-1">Streaks</h6>
+                        <h3 class="mb-0">🔥 5 Days</h3>
+                    </div>
+                </div>
+                <div class="progress mt-2" style="height: 6px;">
+                    <div class="progress-bar bg-warning" role="progressbar" style="width: 70%"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <!-- Main Calendar Area -->
+        <div class="col-lg-8">
+            <div class="glass-panel p-4 h-100">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h4 class="mb-0"><i data-lucide="calendar" class="me-2"></i>Schedule</h4>
+                    <div class="d-flex gap-2">
+                        <a asp-action="Files" class="btn btn-sm btn-outline-info">
+                            <i data-lucide="folder" class="me-1"></i> Files
+                        </a>
+                        <button class="btn btn-sm btn-outline-primary" id="optimizeScheduleBtn">
+                            <i data-lucide="sparkles" class="me-1"></i> Smart Schedule
+                        </button>
+                    </div>
+                </div>
+                <div id="calendar"></div>
+            </div>
+        </div>
+
+        <!-- Right Sidebar (Task Management & AI Chat) -->
+        <div class="col-lg-4 d-flex flex-column gap-4">
+            
+            <!-- Quick Task Add -->
+            <div class="glass-panel p-4">
+                <h5 class="mb-3"><i data-lucide="plus-circle" class="me-2"></i>New Task</h5>
+                <form id="addTaskForm">
+                    <div class="mb-2">
+                        <input type="text" class="form-control custom-input" id="taskTitle" placeholder="Task title..." required>
+                    </div>
+                    <div class="mb-2">
+                        <textarea class="form-control custom-input" id="taskDesc" rows="2" placeholder="Description..."></textarea>
+                    </div>
+                    <div class="row g-2 mb-3">
+                        <div class="col-6">
+                            <input type="datetime-local" class="form-control custom-input" id="taskDate" required>
+                        </div>
+                        <div class="col-6">
+                            <select class="form-select custom-input" id="taskPriority">
+                                <option value="0">Low Priority</option>
+                                <option value="1" selected>Medium Priority</option>
+                                <option value="2">High Priority</option>
+                            </select>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100">Add to Schedule</button>
+                </form>
+            </div>
+
+            <!-- Upcoming List -->
+            <div class="glass-panel p-4 flex-grow-1" style="min-height: 300px; max-height: 400px; overflow-y: auto;">
+                <h5 class="mb-3"><i data-lucide="list" class="me-2"></i>Upcoming</h5>
+                <div id="taskList" class="list-group list-group-flush">
+                    <!-- Tasks will be loaded here via JS -->
+                </div>
+            </div>
+
+            <!-- AI Chat Widget -->
+            <div class="glass-panel p-3" style="height: 300px; display: flex; flex-direction: column;">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <h6 class="mb-0"><i data-lucide="bot" class="me-2"></i>AI Assistant</h6>
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="badge bg-success-subtle text-success">Online</span>
+                        <a asp-action="Chat" class="btn btn-sm btn-outline-primary" title="Tam ekranı aç" style="padding:2px 8px;">
+                            <i data-lucide="maximize-2" size="12"></i>
+                        </a>
+                    </div>
+                </div>
+                <div id="chatMessages" class="flex-grow-1 bg-dark rounded p-2 mb-2" style="overflow-y: auto; font-size: 0.9rem;">
+                    <div class="text-muted text-center mt-4">
+                        <small>Ask me to reorganize your schedule or summarize tasks.</small>
+                    </div>
+                </div>
+                <!-- Typing Indicator -->
+                <div id="chatTypingIndicator" class="text-muted small ms-2 mb-2 d-none">
+                    <i data-lucide="loader-2" class="me-1 animate-spin"></i> Thinking...
+                </div>
+                <div class="input-group input-group-sm">
+                    <input type="text" class="form-control custom-input" placeholder="Type a command..." id="chatInput">
+                    <button class="btn btn-primary" type="button" id="chatSendBtn"><i data-lucide="send" size="16"></i></button>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="~/js/dashboard.js" asp-append-version="true"></script>
+}

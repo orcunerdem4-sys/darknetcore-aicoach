@@ -1,0 +1,78 @@
+@model DarkNetCore.Models.UploadedFile
+@using DarkNetCore.Models
+
+@{
+    var allFiles = ViewData["FlatFiles"] as IEnumerable<UploadedFile>;
+    var children = allFiles != null ? allFiles.Where(f => f.ParentId == Model.Id).ToList() : new List<UploadedFile>();
+    var hasChildren = children.Any();
+}
+
+@if (Model.Type == ResourceType.Folder || hasChildren)
+{
+    <!-- Folder Row -->
+    <div class="list-group-item list-group-item-action bg-dark text-light border-secondary border-opacity-25 p-0">
+        <div class="d-flex justify-content-between align-items-center p-2">
+            <div class="d-flex align-items-center overflow-hidden flex-grow-1">
+                <div class="form-check me-2" onclick="event.stopPropagation()">
+                    <input class="form-check-input context-selector" type="checkbox" value="@Model.Id" data-name="@Model.FileName" data-type="Folder">
+                </div>
+                <div class="d-flex align-items-center flex-grow-1" role="button" data-bs-toggle="collapse" data-bs-target="#folder-@Model.Id">
+                    <i data-lucide="folder" size="16" class="me-2 text-primary"></i>
+                    <span class="text-truncate small fw-bold" style="max-width: 200px;" title="@Model.FileName">@Model.FileName</span>
+                    @if(hasChildren) { <span class="badge bg-secondary ms-2" style="font-size: 0.65rem;">@children.Count</span> }
+                </div>
+            </div>
+            <div class="d-flex gap-2 align-items-center">
+                 <i data-lucide="chevron-down" size="14" class="text-muted" role="button" data-bs-toggle="collapse" data-bs-target="#folder-@Model.Id"></i>
+                 @if (!string.IsNullOrEmpty(Model.Url) && Model.Url.Contains("drive.google.com"))
+                 {
+                    <a href="@Model.Url" target="_blank" class="text-secondary" title="Open in Drive" onclick="event.stopPropagation()">
+                        <i data-lucide="external-link" size="14"></i>
+                    </a>
+                 }
+            </div>
+        </div>
+        
+        <!-- Folder Children Collapse -->
+        <div class="collapse ps-3 border-start border-secondary border-opacity-25" id="folder-@Model.Id">
+            <div class="list-group list-group-flush">
+                @foreach(var child in children)
+                {
+                    <partial name="_FileNode" model="child" view-data="ViewData" />
+                }
+            </div>
+        </div>
+    </div>
+}
+else
+{
+    <!-- File/Link Row -->
+    var targetUrl = Model.Type == ResourceType.Link || Model.Type == ResourceType.Video ? Model.Url : Model.FilePath;
+    
+    <div class="list-group-item list-group-item-action bg-dark text-light border-secondary border-opacity-25 d-flex justify-content-between align-items-center p-2 mb-1 rounded-1">
+        <div class="d-flex align-items-center overflow-hidden flex-grow-1">
+            <div class="form-check me-2">
+                <input class="form-check-input context-selector" type="checkbox" value="@Model.Id" data-name="@Model.FileName" data-type="@Model.Type">
+            </div>
+            <a href="@targetUrl" target="_blank" class="d-flex align-items-center text-decoration-none text-light overflow-hidden flex-grow-1">
+                @if (Model.Type == ResourceType.Image) { <i data-lucide="image" size="14" class="me-2 text-info flex-shrink-0"></i> }
+                else if (Model.Type == ResourceType.Video) { <i data-lucide="youtube" size="14" class="me-2 text-danger flex-shrink-0"></i> }
+                else if (Model.Type == ResourceType.Link) { <i data-lucide="link" size="14" class="me-2 text-warning flex-shrink-0"></i> }
+                else { <i data-lucide="file-text" size="14" class="me-2 text-secondary flex-shrink-0"></i> }
+                
+                <span class="text-truncate small me-2" style="max-width: 200px;" title="@Model.FileName">@Model.FileName</span>
+                
+                @if(Model.ComplexityScore > 0)
+                {
+                    <span class="badge bg-dark border border-secondary text-secondary me-1" style="font-size: 0.6rem;">
+                        @(Model.ComplexityScore > 7 ? "Hard" : Model.ComplexityScore > 4 ? "Med" : "Easy")
+                    </span>
+                    <span class="badge bg-dark border border-secondary text-secondary" style="font-size: 0.6rem;">
+                        @Model.EstimatedStudyTime h
+                    </span>
+                }
+            </a>
+        </div>
+        <a href="@targetUrl" target="_blank" class="text-muted opacity-50"><i data-lucide="external-link" size="12"></i></a>
+    </div>
+}

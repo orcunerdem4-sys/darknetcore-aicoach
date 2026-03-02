@@ -1,0 +1,30 @@
+﻿<div class="card feature-card">
+    <div class="card-header d-flex justify-content-between align-items-center mb-3">
+        <h5 class="card-title mb-0">January 2026</h5>
+        <div class="btn-group">
+            <button class="btn btn-sm btn-outline"><i data-lucide="chevron-left" style="width: 16px;"></i></button>
+            <button class="btn btn-sm btn-outline"><i data-lucide="chevron-right" style="width: 16px;"></i></button>
+        </div>
+    </div>
+    <div class="calendar-grid" style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 0.5rem; text-align: center;">
+        <div class="text-secondary small">Su</div>
+        <div class="text-secondary small">Mo</div>
+        <div class="text-secondary small">Tu</div>
+        <div class="text-secondary small">We</div>
+        <div class="text-secondary small">Th</div>
+        <div class="text-secondary small">Fr</div>
+        <div class="text-secondary small">Sa</div>
+        
+        <!-- Empty days -->
+        <div></div><div></div><div></div><div></div>
+        
+        <!-- Days -->
+        <!-- Mock Data -->
+        @for (int i = 1; i <= 31; i++)
+        {
+            <div class="calendar-day p-2 rounded @(i == 30 ? "bg-primary text-white" : "hover-bg-surface")" style="cursor: pointer;">
+                @i
+            </div>
+        }
+    </div>
+</div>

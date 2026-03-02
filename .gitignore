@@ -1,0 +1,44 @@
+# Build results
+[Dd]ebug/
+[Dd]ebugPublic/
+[Rr]elease/
+[Rr]eleases/
+x64/
+x86/
+[Aa][Rr][Mm]/
+[Aa][Rr][Mm]64/
+bld/
+[Bb]in/
+[Oo]bj/
+[Ll]og/
+[Ll]ogs/
+
+# Visual Studio files
+.vs/
+*.user
+*.userosscache
+*.sln.docstates
+*.suo
+*.userprefs
+
+# IDEs
+.idea/
+.vscode/
+
+# Config files
+appsettings.Development.json
+appsettings.Local.json
+
+# Dependencies
+node_modules/
+bower_components/
+
+# Local databases
+*.db
+*.sqlite
+*.sqlite3
+*.db-journal
+darknetcore.db
+
+# Uploads directory
+wwwroot/uploads/

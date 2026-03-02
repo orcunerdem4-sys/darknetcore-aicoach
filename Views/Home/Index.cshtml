@@ -1,0 +1,131 @@
+﻿@{
+    ViewData["Title"] = "Welcome";
+}
+
+<div class="landing-page">
+    <!-- Hero Section -->
+    <section class="hero-section d-flex align-items-center justify-content-center text-center min-vh-100 position-relative">
+        <div class="container position-relative z-2">
+            <h1 class="display-1 fw-bold text-gradient mb-4">Unlock Your Potential</h1>
+            <p class="lead text-light mb-5 fs-4" style="max-width: 800px; margin: 0 auto;">
+                Optimize your study schedule with AI-driven insights. Upload your materials, and let our neural engine organize your success.
+            </p>
+            <div class="d-flex justify-content-center gap-3">
+                <a asp-controller="Onboarding" asp-action="Index" class="btn btn-primary btn-lg px-5 py-3 glow-effect fw-bold rounded-pill">
+                    Get Started Free
+                </a>
+                <a href="#features" class="btn btn-outline-light btn-lg px-5 py-3 rounded-pill">
+                    Learn More
+                </a>
+            </div>
+        </div>
+        
+        <!-- Brain/Network Animation Overlay -->
+        <div class="brain-overlay"></div>
+    </section>
+
+    <!-- About / Features Section -->
+    <section id="features" class="py-5">
+        <div class="container py-5">
+            <h2 class="text-center display-4 mb-5 fw-bold">Why Choose Dopamind?</h2>
+            <div class="row g-4">
+                <div class="col-md-4">
+                    <div class="glass-panel p-4 h-100 text-center">
+                        <div class="mb-3 text-primary">
+                            <i data-lucide="brain-circuit" size="48"></i>
+                        </div>
+                        <h3>AI Analysis</h3>
+                        <p class="text-white fs-5">Upload your lecture notes and let our AI analyze content to suggest optimal study times.</p>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="glass-panel p-4 h-100 text-center">
+                        <div class="mb-3 text-warning">
+                            <i data-lucide="calendar-check" size="48"></i>
+                        </div>
+                        <h3>Smart Scheduling</h3>
+                        <p class="text-white fs-5">Auto-balance your workload. We prioritize tasks so you never feel overwhelmed.</p>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="glass-panel p-4 h-100 text-center">
+                        <div class="mb-3 text-success">
+                            <i data-lucide="shield-check" size="48"></i>
+                        </div>
+                        <h3>Private & Local</h3>
+                        <p class="text-white fs-5">Your data stays with you. No external cloud dependencies required for basic usage.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Pricing Section -->
+    <section id="pricing" class="py-5">
+        <div class="container py-5">
+            <h2 class="text-center display-4 mb-5 fw-bold">Simple Pricing</h2>
+            <div class="row justify-content-center g-4">
+                <!-- Free Tier -->
+                <div class="col-md-4">
+                    <div class="glass-panel p-5 h-100 position-relative overflow-hidden">
+                        <h3 class="mb-2">Student</h3>
+                        <div class="display-3 fw-bold mb-4">$0</div>
+                        <ul class="list-unstyled mb-4">
+                            <li class="mb-2"><i data-lucide="check" size="16" class="text-success me-2"></i>Unlimited Tasks</li>
+                            <li class="mb-2"><i data-lucide="check" size="16" class="text-success me-2"></i>Basic Scheduling</li>
+                            <li class="mb-2"><i data-lucide="check" size="16" class="text-success me-2"></i>Local Storage</li>
+                        </ul>
+                        <a asp-controller="Onboarding" asp-action="Index" class="btn btn-outline-light w-100 rounded-pill">Start Free</a>
+                    </div>
+                </div>
+                <!-- Pro Tier -->
+                <div class="col-md-4">
+                    <div class="glass-panel p-5 h-100 position-relative border-primary">
+                        <div class="position-absolute top-0 end-0 bg-primary text-white px-3 py-1 rounded-bl-3">Popular</div>
+                        <h3 class="mb-2">Pro</h3>
+                        <div class="display-3 fw-bold mb-4">$9<span class="fs-5 text-muted">/mo</span></div>
+                        <ul class="list-unstyled mb-4">
+                            <li class="mb-2"><i data-lucide="check" size="16" class="text-primary me-2"></i>Everything in Free</li>
+                            <li class="mb-2"><i data-lucide="check" size="16" class="text-primary me-2"></i>AI Content Analysis</li>
+                            <li class="mb-2"><i data-lucide="check" size="16" class="text-primary me-2"></i>Advanced Rescheduling</li>
+                            <li class="mb-2"><i data-lucide="check" size="16" class="text-primary me-2"></i>Priority Support</li>
+                        </ul>
+                        <a asp-controller="Onboarding" asp-action="Index" class="btn btn-primary w-100 glow-effect rounded-pill">Go Pro</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+</div>
+
+<style>
+    .text-gradient {
+        background: linear-gradient(135deg, #fff 0%, #a855f7 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+    }
+    
+    .glow-effect {
+        box-shadow: 0 0 20px rgba(124, 58, 237, 0.5);
+        transition: box-shadow 0.3s ease;
+    }
+    
+    .glow-effect:hover {
+        box-shadow: 0 0 30px rgba(124, 58, 237, 0.8);
+    }
+
+    .brain-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-image: url('https://cdn.pixabay.com/photo/2020/09/27/03/38/network-5605658_1280.jpg'); /* Placeholder network image */
+        background-size: cover;
+        background-position: center;
+        opacity: 0.1;
+        mix-blend-mode: screen;
+        pointer-events: none;
+        z-index: 1;
+    }
+</style>

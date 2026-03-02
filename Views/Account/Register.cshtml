@@ -1,0 +1,62 @@
+@{
+    ViewData["Title"] = "Register - Dopamind";
+    Layout = "_Layout";
+}
+
+<div class="container py-5 d-flex justify-content-center align-items-center min-vh-100">
+    <div class="card glass-panel p-5 shadow-lg" style="max-width: 450px; width: 100%;">
+        <div class="text-center mb-4">
+            <h2 class="fw-bold text-gradient">Create Account</h2>
+            <p class="text-light">Join Dopamind and organize your success</p>
+        </div>
+
+        @if (!string.IsNullOrEmpty(ViewBag.Error))
+        {
+            <div class="alert alert-danger" role="alert">
+                @ViewBag.Error
+            </div>
+        }
+
+        <form asp-controller="Account" asp-action="Register" method="post">
+            <div class="mb-3">
+                <label for="username" class="form-label text-light">Username</label>
+                <input type="text" class="form-control bg-dark text-light border-secondary" id="username" name="username" required>
+            </div>
+
+            <div class="mb-3">
+                <label for="email" class="form-label text-light">Email Address</label>
+                <input type="email" class="form-control bg-dark text-light border-secondary" id="email" name="email" required>
+            </div>
+            
+            <div class="mb-4">
+                <label for="password" class="form-label text-light">Password</label>
+                <input type="password" class="form-control bg-dark text-light border-secondary" id="password" name="password" required>
+            </div>
+            
+            <button type="submit" class="btn btn-primary w-100 glow-effect rounded-pill py-2 fw-bold">Sign Up</button>
+        </form>
+
+        <div class="text-center mt-4">
+            <p class="text-light mb-0">Already have an account? <br>
+                <a asp-action="Login" class="text-primary fw-bold text-decoration-none">Log in here</a>
+            </p>
+        </div>
+    </div>
+</div>
+
+<style>
+    .text-gradient {
+        background: linear-gradient(135deg, #fff 0%, #a855f7 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+    }
+    
+    .glow-effect {
+        box-shadow: 0 0 15px rgba(124, 58, 237, 0.4);
+        transition: box-shadow 0.3s ease;
+    }
+    
+    .glow-effect:hover {
+        box-shadow: 0 0 25px rgba(124, 58, 237, 0.8);
+    }
+</style>

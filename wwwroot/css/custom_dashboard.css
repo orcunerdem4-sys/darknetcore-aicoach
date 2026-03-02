@@ -1,0 +1,222 @@
+/* Brain/Network Background */
+body.dark-theme {
+    background-color: #0a0a0a;
+    background-image:
+        radial-gradient(circle at 15% 50%, rgba(76, 29, 149, 0.1) 0%, transparent 25%),
+        radial-gradient(circle at 85% 30%, rgba(124, 58, 237, 0.1) 0%, transparent 25%);
+    min-height: 100vh;
+}
+
+/* Glassmorphism */
+.glass-panel {
+    background: rgba(255, 255, 255, 0.03);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.stat-card {
+    transition: transform 0.2s;
+}
+
+.stat-card:hover {
+    transform: translateY(-2px);
+    background: rgba(255, 255, 255, 0.05);
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+    width: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: #0a0a0a;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #444;
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #666;
+}
+
+/* Calendar Overrides for Dark Mode */
+.fc-theme-standard td,
+.fc-theme-standard th {
+    border-color: rgba(255, 255, 255, 0.1);
+}
+
+.fc-toolbar-title {
+    color: #fff;
+}
+
+.fc-button-primary {
+    background-color: #4c1d95 !important;
+    border-color: #4c1d95 !important;
+}
+
+.fc-button-active {
+    background-color: #6d28d9 !important;
+}
+
+/* Premium Logo Styles */
+.logo-container {
+    display: flex;
+    align-items: center;
+    padding: 0.5rem 1rem;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 50px;
+    box-shadow: 0 0 15px rgba(168, 85, 247, 0.1);
+    transition: all 0.3s ease;
+}
+
+.logo-container:hover {
+    box-shadow: 0 0 20px rgba(168, 85, 247, 0.3);
+    border-color: rgba(168, 85, 247, 0.3);
+}
+
+.logo-gradient-text {
+    background: linear-gradient(135deg, #fff 0%, #d8b4fe 50%, #a855f7 100%);
+    background-clip: text;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+    font-size: 1.5rem;
+}
+
+.logo-icon-animated {
+    color: #a855f7;
+    filter: drop-shadow(0 0 8px rgba(168, 85, 247, 0.6));
+    animation: pulse-glow 3s infinite alternate;
+}
+
+@keyframes pulse-glow {
+    0% {
+        filter: drop-shadow(0 0 5px rgba(168, 85, 247, 0.4));
+    }
+
+    100% {
+        filter: drop-shadow(0 0 12px rgba(168, 85, 247, 0.8));
+    }
+}
+
+/* Custom File Upload */
+.file-upload-wrapper {
+    position: relative;
+    width: 100%;
+    max-width: 400px;
+}
+
+.file-upload-input {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    cursor: pointer;
+    z-index: 2;
+}
+
+.file-upload-trigger {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.5rem 1rem;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    transition: all 0.3s ease;
+    color: #a0a0a0;
+}
+
+.file-upload-wrapper:hover .file-upload-trigger {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(168, 85, 247, 0.5);
+    color: #fff;
+}
+
+.file-selected {
+    color: #d8b4fe !important;
+    border-color: #a855f7 !important;
+    background: rgba(168, 85, 247, 0.1) !important;
+}
+
+/* Dark Theme Form Inputs */
+.custom-input {
+    background-color: rgba(0, 0, 0, 0.3) !important;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: #e2e8f0 !important;
+    transition: all 0.2s;
+}
+
+.custom-input:focus {
+    background-color: rgba(0, 0, 0, 0.5) !important;
+    border-color: #a855f7;
+    box-shadow: 0 0 0 0.25rem rgba(168, 85, 247, 0.15);
+    color: #fff !important;
+}
+
+.custom-input::placeholder {
+    color: rgba(255, 255, 255, 0.4);
+}
+
+/* Delete Button Overlay */
+.glass-panel {
+    position: relative;
+    /* Ensure absolute positioning works inside */
+}
+
+.delete-btn-wrapper {
+    top: -10px;
+    right: -10px;
+    opacity: 0;
+    transition: opacity 0.2s ease-in-out;
+    z-index: 10;
+}
+
+.glass-panel:hover .delete-btn-wrapper {
+    opacity: 1;
+}
+
+.btn-delete-icon {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: rgba(220, 53, 69, 0.2);
+    color: #ef4444;
+    border: 1px solid rgba(220, 53, 69, 0.3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+    padding: 0;
+}
+
+.btn-delete-icon:hover {
+    background: #dc3545;
+    color: white;
+    transform: scale(1.1);
+    box-shadow: 0 0 10px rgba(220, 53, 69, 0.4);
+}
+
+/* Animation Utilities */
+.animate-spin {
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    from {
+        transform: rotate(0deg);
+    }
+
+    to {
+        transform: rotate(360deg);
+    }
+}

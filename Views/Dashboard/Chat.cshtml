@@ -1,0 +1,341 @@
+@{
+    ViewData["Title"] = "AI Chat";
+    var sessions = ViewBag.Sessions as List<DarkNetCore.Models.ChatSession> ?? new();
+    var messages = ViewBag.Messages as List<DarkNetCore.Models.ChatMessage> ?? new();
+    var currentSessionId = ViewBag.CurrentSessionId as string ?? "";
+}
+
+<style>
+    body { overflow: hidden; }
+    .session-item { color: rgba(255,255,255,0.75); transition: background 0.2s; }
+    .session-item:hover { background: rgba(255,255,255,0.08); color: white; }
+    .active-session { background: rgba(108,99,255,0.25) !important; color: white !important; border-left: 3px solid #6c63ff; }
+    .chat-bubble-wrapper { display: flex; align-items: flex-end; }
+    .user-bubble-wrapper { justify-content: flex-end; }
+    .ai-bubble-wrapper { justify-content: flex-start; }
+    .chat-bubble { max-width: 70%; border-radius: 16px; padding: 10px 14px; position: relative; }
+    .user-bubble { background: linear-gradient(135deg, #6c63ff, #48cae4); color: white; border-bottom-right-radius: 4px; }
+    .ai-bubble { background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.9); border-bottom-left-radius: 4px; border: 1px solid rgba(255,255,255,0.1); }
+    .bubble-content { line-height: 1.5; word-break: break-word; }
+    .bubble-content h1,.bubble-content h2,.bubble-content h3 { font-size: 1rem; font-weight: bold; margin: 8px 0 4px; }
+    .bubble-content ul,.bubble-content ol { padding-left: 1.2rem; margin: 4px 0; }
+    .bubble-content code { background: rgba(0,0,0,0.3); padding: 1px 4px; border-radius: 3px; font-size: 0.85em; }
+    .bubble-time { font-size: 0.68rem; opacity: 0.6; margin-top: 4px; text-align: right; }
+    .typing-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: rgba(255,255,255,0.5); margin: 0 2px; animation: bounce 1.2s infinite; }
+    .typing-dot:nth-child(2) { animation-delay: 0.2s; }
+    .typing-dot:nth-child(3) { animation-delay: 0.4s; }
+    @@keyframes bounce { 0%,60%,100%{transform:translateY(0)} 30%{transform:translateY(-8px)} }
+    .suggestion-btn { font-size: 0.8rem; border-radius: 20px; }
+</style>
+
+<div class="chat-page d-flex" style="height: calc(100vh - 70px); overflow: hidden;">
+
+    <!-- ── Sidebar ── -->
+    <div class="chat-sidebar glass-panel d-flex flex-column p-3" style="width:280px; min-width:240px; border-radius:0; border-right:1px solid rgba(255,255,255,0.08);">
+        <div class="d-flex align-items-center justify-content-between mb-3">
+            <h6 class="mb-0 fw-bold"><i data-lucide="message-square" class="me-2" size="16"></i>Sohbetler</h6>
+            <button class="btn btn-sm btn-primary" id="newChatBtn" title="Yeni sohbet">
+                <i data-lucide="plus" size="14"></i>
+            </button>
+        </div>
+
+        <div class="session-list flex-grow-1" style="overflow-y:auto;">
+            @if (!sessions.Any())
+            {
+                <p class="text-muted small text-center mt-4">Henüz sohbet yok.<br>Yeni bir sohbet başlat.</p>
+            }
+            @foreach (var s in sessions)
+            {
+                <a href="@Url.Action("Chat", new { sessionId = s.Id })"
+                   class="session-item d-flex align-items-center justify-content-between p-2 rounded mb-1 text-decoration-none @(s.Id == currentSessionId ? "active-session" : "")">
+                    <span class="text-truncate small">@s.Title</span>
+                    <span class="text-muted" style="font-size:0.7rem; white-space:nowrap;">@s.StartedAt.ToString("dd MMM")</span>
+                </a>
+            }
+        </div>
+
+        <div class="mt-3 pt-3" style="border-top:1px solid rgba(255,255,255,0.08);">
+            <a asp-action="Index" class="btn btn-sm btn-outline-secondary w-100">
+                <i data-lucide="layout-dashboard" size="14" class="me-1"></i> Dashboard
+            </a>
+        </div>
+    </div>
+
+    <!-- ── Main Chat Area ── -->
+    <div class="chat-main flex-grow-1 d-flex flex-column" style="min-width:0;">
+
+        <!-- Header -->
+        <div class="chat-header d-flex align-items-center px-4 py-3" style="border-bottom:1px solid rgba(255,255,255,0.08); background:rgba(0,0,0,0.2);">
+            <div class="ai-avatar me-3" style="width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,#6c63ff,#48cae4); display:flex;align-items:center;justify-content:center;">
+                <i data-lucide="bot" size="20" class="text-white"></i>
+            </div>
+            <div>
+                <h6 class="mb-0 fw-bold">AI Coach</h6>
+                <small class="text-success">● Çevrimiçi — gemini-2.0-flash</small>
+            </div>
+            <div class="ms-auto d-flex gap-2">
+                <button class="btn btn-sm btn-outline-secondary" id="clearContextBtn" title="Bağlam temizle">
+                    <i data-lucide="x-circle" size="14"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Messages -->
+        <div id="chatMessages" class="flex-grow-1 px-4 py-3" style="overflow-y:auto;">
+            @if (!messages.Any())
+            {
+                <div class="text-center mt-5 text-muted" id="emptyState">
+                    <div class="mb-3" style="font-size:3rem;">🤖</div>
+                    <h5>AI Coach'a merhaba de!</h5>
+                    <p class="small">Ders planı oluşturma, dosya analizi, takvim optimizasyonu ve daha fazlası için sorabilirsin.</p>
+                    <div class="d-flex flex-wrap gap-2 justify-content-center mt-4">
+                        <button class="btn btn-sm btn-outline-primary suggestion-btn">📅 Bu haftaki derslerimi planla</button>
+                        <button class="btn btn-sm btn-outline-primary suggestion-btn">📚 Hangi derse öncelik vermeliyim?</button>
+                        <button class="btn btn-sm btn-outline-primary suggestion-btn">⏰ Çalışma programı öner</button>
+                    </div>
+                </div>
+            }
+            else
+            {
+                @foreach (var msg in messages)
+                {
+                    <div class="chat-bubble-wrapper @(msg.Role == "user" ? "user-bubble-wrapper" : "ai-bubble-wrapper") mb-3">
+                        @if (msg.Role != "user")
+                        {
+                            <div class="ai-avatar-sm me-2" style="width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,#6c63ff,#48cae4);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                                <i data-lucide="bot" size="14" class="text-white"></i>
+                            </div>
+                        }
+                        <div class="chat-bubble @(msg.Role == "user" ? "user-bubble" : "ai-bubble")">
+                            <div class="bubble-content" data-markdown="@msg.Content.Replace("\"", "&quot;")">@msg.Content</div>
+                            <div class="bubble-time">@msg.SentAt.ToString("HH:mm")</div>
+                        </div>
+                    </div>
+                }
+            }
+
+            <!-- Typing indicator -->
+            <div id="typingIndicator" class="chat-bubble-wrapper ai-bubble-wrapper mb-3 d-none">
+                <div class="ai-avatar-sm me-2" style="width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,#6c63ff,#48cae4);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                    <i data-lucide="bot" size="14" class="text-white"></i>
+                </div>
+                <div class="ai-bubble" style="padding:12px 16px;">
+                    <span class="typing-dot"></span>
+                    <span class="typing-dot"></span>
+                    <span class="typing-dot"></span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Input -->
+        <div class="chat-input-area px-4 py-3" style="border-top:1px solid rgba(255,255,255,0.08); background:rgba(0,0,0,0.2);">
+            <div class="d-flex align-items-end gap-3">
+                <button type="button" class="btn btn-outline-secondary" id="attachBtn" style="border-radius:12px; width:48px; height:48px; display:flex;align-items:center;justify-content:center; flex-shrink:0;">
+                    <i data-lucide="paperclip" size="18"></i>
+                </button>
+                <input type="file" id="chatFileInput" class="d-none" />
+                <div class="flex-grow-1">
+                    <textarea id="chatInput" class="form-control custom-input" rows="1"
+                        placeholder="AI Coach'a bir şey sor... (Shift+Enter = yeni satır)"
+                        style="resize:none; border-radius:12px; max-height:120px;"></textarea>
+                </div>
+                <button id="sendBtn" class="btn btn-primary" style="border-radius:12px; width:48px; height:48px; display:flex;align-items:center;justify-content:center; flex-shrink:0;">
+                    <i data-lucide="send" size="18"></i>
+                </button>
+            </div>
+            <div class="d-flex gap-2 mt-2" id="contextBadges">
+                <small class="text-muted">Bağlam: <span id="contextInfo">Yok</span></small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<input type="hidden" id="currentSessionId" value="@currentSessionId" />
+
+
+
+@section Scripts {
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<script>
+    const sessionIdInput = document.getElementById('currentSessionId');
+    const chatMessages = document.getElementById('chatMessages');
+    const chatInput = document.getElementById('chatInput');
+    const sendBtn = document.getElementById('sendBtn');
+    const attachBtn = document.getElementById('attachBtn');
+    const chatFileInput = document.getElementById('chatFileInput');
+    const contextInfo = document.getElementById('contextInfo');
+    const typingIndicator = document.getElementById('typingIndicator');
+
+    let attachedFileIds = [];
+
+    // Attach File Logic
+    if(attachBtn && chatFileInput) {
+        attachBtn.addEventListener('click', () => chatFileInput.click());
+
+        chatFileInput.addEventListener('change', async function() {
+            if (!this.files.length) return;
+            const file = this.files[0];
+            
+            const formData = new FormData();
+            formData.append('file', file);
+            
+            contextInfo.textContent = 'Yükleniyor...';
+            attachBtn.disabled = true;
+
+            try {
+                const res = await fetch('/Dashboard/UploadFileAjax', {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await res.json();
+                
+                if (data.success) {
+                    attachedFileIds.push(data.fileId);
+                    contextInfo.textContent = data.fileName + ' eklendi ✅';
+                } else {
+                    alert('Yükleme hatası: ' + data.message);
+                    contextInfo.textContent = 'Hata oluştu';
+                }
+            } catch (e) {
+                alert('Hata: ' + e.message);
+                contextInfo.textContent = 'Hata oluştu';
+            }
+            
+            attachBtn.disabled = false;
+            this.value = ''; // reset
+        });
+    }
+
+    // Helper: always read current session id dynamically
+    function getSessionId() { return sessionIdInput.value || null; }
+
+    // Render existing markdown messages on load
+    document.querySelectorAll('.bubble-content[data-markdown]').forEach(el => {
+        el.innerHTML = marked.parse(el.dataset.markdown || el.textContent);
+    });
+
+    // Auto-scroll to bottom
+    function scrollToBottom() {
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+    scrollToBottom();
+
+    // Auto-resize textarea
+    chatInput.addEventListener('input', function () {
+        this.style.height = 'auto';
+        this.style.height = Math.min(this.scrollHeight, 120) + 'px';
+    });
+
+    // Suggestion chips
+    document.querySelectorAll('.suggestion-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            chatInput.value = btn.textContent.trim().replace(/^[^\w]+/, '');
+            sendMessage();
+        });
+    });
+
+    // New chat
+    document.getElementById('newChatBtn').addEventListener('click', async () => {
+        const res = await fetch('/Dashboard/NewChatSession', { method: 'POST', headers: { 'RequestVerificationToken': getAntiForgeryToken() } });
+        const data = await res.json();
+        if (data.success) window.location.href = '/Dashboard/Chat?sessionId=' + data.sessionId;
+    });
+
+    function getAntiForgeryToken() {
+        return document.querySelector('input[name="__RequestVerificationToken"]')?.value ?? '';
+    }
+
+    function appendMessage(role, content) {
+        const wrapper = document.createElement('div');
+        wrapper.className = `chat-bubble-wrapper ${role === 'user' ? 'user-bubble-wrapper' : 'ai-bubble-wrapper'} mb-3`;
+
+        const time = new Date().toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
+
+        if (role !== 'user') {
+            const avatar = document.createElement('div');
+            avatar.className = 'ai-avatar-sm me-2';
+            avatar.style.cssText = 'width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,#6c63ff,#48cae4);display:flex;align-items:center;justify-content:center;flex-shrink:0;';
+            avatar.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>';
+            wrapper.appendChild(avatar);
+        }
+
+        const bubble = document.createElement('div');
+        bubble.className = `chat-bubble ${role === 'user' ? 'user-bubble' : 'ai-bubble'}`;
+
+        const bubbleContent = document.createElement('div');
+        bubbleContent.className = 'bubble-content';
+        bubbleContent.innerHTML = role === 'user' ? escapeHtml(content) : marked.parse(content);
+
+        const bubbleTime = document.createElement('div');
+        bubbleTime.className = 'bubble-time';
+        bubbleTime.textContent = time;
+
+        bubble.appendChild(bubbleContent);
+        bubble.appendChild(bubbleTime);
+        wrapper.appendChild(bubble);
+
+        // Remove empty state if exists
+        document.getElementById('emptyState')?.remove();
+
+        chatMessages.insertBefore(wrapper, typingIndicator);
+        scrollToBottom();
+    }
+
+    function escapeHtml(text) {
+        return text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    }
+
+    async function sendMessage() {
+        const msg = chatInput.value.trim();
+        if (!msg) return;
+
+        appendMessage('user', msg);
+        chatInput.value = '';
+        chatInput.style.height = 'auto';
+
+        typingIndicator.classList.remove('d-none');
+        scrollToBottom();
+        sendBtn.disabled = true;
+
+        try {
+            const response = await fetch('/Dashboard/ChatWithAi', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    message: msg,
+                    sessionId: getSessionId(),
+                    contextFileIds: attachedFileIds
+                })
+            });
+            const data = await response.json();
+            typingIndicator.classList.add('d-none');
+            if (data.success) {
+                appendMessage('assistant', data.response);
+                // Always update session id (first message creates it)
+                if (data.sessionId) {
+                    sessionIdInput.value = data.sessionId;
+                    history.replaceState(null, '', '/Dashboard/Chat?sessionId=' + data.sessionId);
+                }
+            } else {
+                appendMessage('assistant', '⚠️ ' + (data.response || 'Bir hata oluştu.'));
+            }
+            // Reset attached files after successful send
+            attachedFileIds = [];
+            contextInfo.textContent = 'Yok';
+        } catch (e) {
+            typingIndicator.classList.add('d-none');
+            appendMessage('assistant', '⚠️ Bağlantı hatası: ' + e.message);
+        }
+        sendBtn.disabled = false;
+    }
+
+    // Send on Enter (Shift+Enter for newline)
+    chatInput.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            sendMessage();
+        }
+    });
+    sendBtn.addEventListener('click', sendMessage);
+</script>
+}
