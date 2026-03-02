@@ -174,5 +174,28 @@ public class DatabaseService
         if (session != null) _context.ChatSessions.Remove(session);
         await _context.SaveChangesAsync();
     }
+
+    // -----------------------------------------
+    // Feedback Notes Operations
+    // -----------------------------------------
+    public async Task SaveFeedbackAsync(string content)
+    {
+        var note = new FeedbackNote
+        {
+            Id = Guid.NewGuid().ToString(),
+            Content = content,
+            CreatedAt = DateTime.UtcNow
+        };
+        _context.FeedbackNotes.Add(note);
+        await _context.SaveChangesAsync();
+    }
+
+    public async Task<List<FeedbackNote>> GetFeedbacksAsync()
+    {
+        return await _context.FeedbackNotes
+            .OrderByDescending(n => n.CreatedAt)
+            .ToListAsync();
+    }
 }
+
 

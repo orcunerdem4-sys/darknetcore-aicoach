@@ -52,6 +52,10 @@
                     <a asp-controller="Account" asp-action="Register" class="btn btn-primary glow-effect">Sign Up</a>
                 }
             </div>
+            <!-- Hamburger button (shown only on mobile via CSS) -->
+            <button class="hamburger-btn" id="hamburgerBtn" aria-label="Menüyü aç">
+                <i data-lucide="menu" size="26"></i>
+            </button>
         </header>
         <main role="main" class="main-content">
             @RenderBody()
@@ -61,6 +65,31 @@
                 &copy; 2026 - Dopamind
             </div>
         </footer>
+    </div>
+
+    <!-- Mobile Navigation Panel -->
+    <div class="mobile-nav-overlay" id="mobileNavOverlay"></div>
+    <div class="mobile-nav-panel" id="mobileNavPanel">
+        <button class="mobile-nav-close" id="mobileNavClose" aria-label="Kapat">&times;</button>
+        <div class="mobile-nav-logo">
+            <i data-lucide="brain" size="22"></i> Dopamind
+        </div>
+        <a href="/" class="nav-link"><i data-lucide="home" class="nav-icon me-2"></i> Ana Sayfa</a>
+        <a href="/Dashboard" class="nav-link"><i data-lucide="layout-dashboard" class="nav-icon me-2"></i> Dashboard</a>
+        <a href="/Dashboard/Chat" class="nav-link"><i data-lucide="message-circle" class="nav-icon me-2"></i> AI Chat</a>
+        <a href="/Dashboard/Files" class="nav-link"><i data-lucide="folder-open" class="nav-icon me-2"></i> Dosyalar</a>
+        <div style="margin-top: auto; border-top: 1px solid var(--border-color); padding-top: 1rem;">
+            @if (User.Identity != null && User.Identity.IsAuthenticated)
+            {
+                <span class="fw-bold text-dark d-block mb-2">@User.Identity.Name</span>
+                <a asp-controller="Account" asp-action="Logout" class="btn btn-outline-danger w-100">Çıkış Yap</a>
+            }
+            else
+            {
+                <a asp-controller="Account" asp-action="Login" class="btn btn-outline-primary w-100 mb-2">Giriş Yap</a>
+                <a asp-controller="Account" asp-action="Register" class="btn btn-primary w-100">Kayıt Ol</a>
+            }
+        </div>
     </div>
 
     <!-- Floating Feedback/Notes Button -->
@@ -157,6 +186,27 @@
                 alert('Sunucuya ulaşılamadı.');
             }
         }
+
+        // ── Hamburger Menu ──────────────────────────────────────
+        const hamburgerBtn = document.getElementById('hamburgerBtn');
+        const mobileNavPanel = document.getElementById('mobileNavPanel');
+        const mobileNavOverlay = document.getElementById('mobileNavOverlay');
+        const mobileNavClose = document.getElementById('mobileNavClose');
+
+        function openMobileNav() {
+            mobileNavPanel.classList.add('open');
+            mobileNavOverlay.classList.add('open');
+            document.body.style.overflow = 'hidden';
+        }
+        function closeMobileNav() {
+            mobileNavPanel.classList.remove('open');
+            mobileNavOverlay.classList.remove('open');
+            document.body.style.overflow = '';
+        }
+
+        if (hamburgerBtn) hamburgerBtn.addEventListener('click', openMobileNav);
+        if (mobileNavClose) mobileNavClose.addEventListener('click', closeMobileNav);
+        if (mobileNavOverlay) mobileNavOverlay.addEventListener('click', closeMobileNav);
     </script>
     @await RenderSectionAsync("Scripts", required: false)
 </body>

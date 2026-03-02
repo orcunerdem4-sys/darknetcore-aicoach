@@ -66,29 +66,19 @@ public class DashboardController : Controller
     }
 
     [HttpPost]
-    public IActionResult SaveFeedback([FromBody] FeedbackNote note)
+    public async Task<IActionResult> SaveFeedback([FromBody] FeedbackSaveRequest request)
     {
-        var filePath = Path.Combine(Directory.GetCurrentDirectory(), "App_Data", "feedbacks.json");
-        Directory.CreateDirectory(Path.GetDirectoryName(filePath)!);
-        var notes = new List<FeedbackNote>();
-        if (System.IO.File.Exists(filePath))
-        {
-            notes = System.Text.Json.JsonSerializer.Deserialize<List<FeedbackNote>>(System.IO.File.ReadAllText(filePath)) ?? new List<FeedbackNote>();
-        }
-        note.Id = Guid.NewGuid().ToString();
-        note.CreatedAt = DateTime.UtcNow;
-        notes.Add(note);
-        System.IO.File.WriteAllText(filePath, System.Text.Json.JsonSerializer.Serialize(notes));
+        if (string.IsNullOrWhiteSpace(request?.Content))
+            return Json(new { success = false });
+        await _dataService.SaveFeedbackAsync(request.Content);
         return Json(new { success = true });
     }
 
     [HttpGet]
-    public IActionResult GetFeedbacks()
+    public async Task<IActionResult> GetFeedbacks()
     {
-        var filePath = Path.Combine(Directory.GetCurrentDirectory(), "App_Data", "feedbacks.json");
-        if (!System.IO.File.Exists(filePath)) return Json(new List<FeedbackNote>());
-        var notes = System.Text.Json.JsonSerializer.Deserialize<List<FeedbackNote>>(System.IO.File.ReadAllText(filePath));
-        return Json(notes?.OrderByDescending(n => n.CreatedAt) ?? new List<FeedbackNote>().OrderBy(n=>1));
+        var notes = await _dataService.GetFeedbacksAsync();
+        return Json(notes.Select(n => new { n.Id, n.Content, n.CreatedAt }));
     }
 
     
@@ -737,11 +727,9 @@ public class DashboardController : Controller
         public List<string> Parents { get; set; } = new List<string>();
     }
 
-    public class FeedbackNote
+    public class FeedbackSaveRequest
     {
-        public string? Id { get; set; }
         public string Content { get; set; } = string.Empty;
-        public DateTime CreatedAt { get; set; }
     }
 }
 

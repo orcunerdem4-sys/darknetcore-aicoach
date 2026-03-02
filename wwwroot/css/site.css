@@ -1,12 +1,19 @@
 ﻿:root {
-    --bg-primary: #f0fdf4; /* Light Mint Green */
-    --bg-secondary: #ffffff; /* White Cards */
+    --bg-primary: #f0fdf4;
+    /* Light Mint Green */
+    --bg-secondary: #ffffff;
+    /* White Cards */
     --bg-surface: #f8fafc;
-    --text-primary: #1f2937; /* Very Dark Gray */
-    --text-secondary: #4b5563; /* Medium Gray */
-    --accent-primary: #059669; /* Emerald Green */
-    --accent-hover: #047857; /* Dark Emerald */
-    --border-color: #e5e7eb; /* Light Border */
+    --text-primary: #1f2937;
+    /* Very Dark Gray */
+    --text-secondary: #4b5563;
+    /* Medium Gray */
+    --accent-primary: #059669;
+    /* Emerald Green */
+    --accent-hover: #047857;
+    /* Dark Emerald */
+    --border-color: #e5e7eb;
+    /* Light Border */
     --glass-bg: rgba(255, 255, 255, 0.95);
     --glass-border: rgba(0, 0, 0, 0.05);
 }
@@ -19,7 +26,10 @@ body {
     min-height: 100vh;
 }
 
-a { text-decoration: none; color: inherit; }
+a {
+    text-decoration: none;
+    color: inherit;
+}
 
 .app-shell {
     display: flex;
@@ -36,7 +46,7 @@ a { text-decoration: none; color: inherit; }
     height: 70px;
     border-bottom: 1px solid var(--border-color);
     background: var(--bg-secondary);
-    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
     position: sticky;
     top: 0;
     z-index: 1000;
@@ -69,7 +79,8 @@ a { text-decoration: none; color: inherit; }
     transition: all 0.2s ease;
 }
 
-.nav-link:hover, .nav-link.active {
+.nav-link:hover,
+.nav-link.active {
     color: var(--accent-primary);
     background: #ecfdf5;
 }
@@ -167,7 +178,19 @@ a { text-decoration: none; color: inherit; }
     box-shadow: 0 4px 6px -1px var(--glass-border);
 }
 
-.feature-card::before { content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: radial-gradient(circle at top right, rgba(5, 150, 105, 0.05), transparent 40%); opacity: 0; transition: opacity 0.3s; pointer-events: none; z-index: 0; }
+.feature-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: radial-gradient(circle at top right, rgba(5, 150, 105, 0.05), transparent 40%);
+    opacity: 0;
+    transition: opacity 0.3s;
+    pointer-events: none;
+    z-index: 0;
+}
 
 .feature-card:hover::before {
     opacity: 1;
@@ -176,7 +199,7 @@ a { text-decoration: none; color: inherit; }
 .feature-card:hover {
     transform: translateY(-5px);
     border-color: var(--accent-primary);
-    box-shadow: 0 10px 15px -3px rgba(0,0,0,0.05);
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05);
 }
 
 .card-icon {
@@ -211,13 +234,15 @@ a { text-decoration: none; color: inherit; }
 }
 
 /* Form Controls Overrides for Dark Mode */
-.form-control, .form-select {
+.form-control,
+.form-select {
     background-color: #fff !important;
     border-color: var(--border-color) !important;
     color: var(--text-primary) !important;
 }
 
-.form-control:focus, .form-select:focus {
+.form-control:focus,
+.form-select:focus {
     background-color: #fff !important;
     border-color: var(--accent-primary) !important;
     color: var(--text-primary) !important;
@@ -229,3 +254,139 @@ a { text-decoration: none; color: inherit; }
     margin-bottom: 0.5rem;
 }
 
+/* ─── Hamburger Menu ─────────────────────────────── */
+.hamburger-btn {
+    display: none;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 6px;
+    color: var(--text-primary);
+    border-radius: 8px;
+}
+
+.mobile-nav-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.4);
+    z-index: 1100;
+}
+
+.mobile-nav-panel {
+    position: fixed;
+    top: 0;
+    left: -100%;
+    width: 260px;
+    height: 100vh;
+    background: #fff;
+    z-index: 1200;
+    transition: left 0.3s ease;
+    box-shadow: 4px 0 20px rgba(0, 0, 0, 0.12);
+    display: flex;
+    flex-direction: column;
+    padding: 1.5rem;
+    gap: 1rem;
+}
+
+.mobile-nav-panel.open {
+    left: 0;
+}
+
+.mobile-nav-overlay.open {
+    display: block;
+}
+
+.mobile-nav-panel .mobile-nav-logo {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 1.4rem;
+    font-weight: 800;
+    color: var(--accent-primary);
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.mobile-nav-panel .nav-link {
+    font-size: 1.05rem;
+    padding: 0.75rem 1rem;
+    border-radius: 10px;
+    width: 100%;
+}
+
+.mobile-nav-close {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    color: var(--text-secondary);
+}
+
+/* ─── Tablet (≤768px) ─────────────────────────────── */
+@media (max-width: 768px) {
+    .main-header {
+        padding: 0.75rem 1rem;
+        height: 60px;
+    }
+
+    /* Hide desktop nav & user-actions, show hamburger */
+    .main-nav {
+        display: none;
+    }
+
+    .user-actions {
+        display: none;
+    }
+
+    .hamburger-btn {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .logo-gradient-text {
+        font-size: 1.3rem;
+    }
+
+    .main-content {
+        padding: 0.75rem;
+    }
+
+    .hero-title {
+        font-size: 2.2rem;
+    }
+
+    .hero-subtitle {
+        font-size: 1rem;
+    }
+
+    .feature-grid {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+        margin-top: 2rem;
+    }
+}
+
+/* ─── Small Mobile (≤480px) ─────────────────────────── */
+@media (max-width: 480px) {
+    .main-header {
+        padding: 0.5rem 0.75rem;
+        height: 56px;
+    }
+
+    .logo-container {
+        padding: 0.3rem 0.75rem;
+    }
+
+    .logo-gradient-text {
+        font-size: 1.1rem;
+    }
+
+    .main-content {
+        padding: 0.5rem;
+    }
+}

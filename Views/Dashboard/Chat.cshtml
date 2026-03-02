@@ -28,19 +28,46 @@
     .action-btn { background: #fff; border: 1px solid #e5e7eb; padding: 12px 16px; border-radius: 10px; color: #4b5563; font-weight: 500; text-align: left; width: 100%; transition: all 0.2s; display: flex; align-items: center; }
     .action-btn:hover { border-color: #059669; color: #059669; background: #ecfdf5; }
     .action-btn i { margin-right: 12px; color: #059669; }
+
+    /* Chat layout */
+    .chat-container { height: calc(100vh - 70px); }
     
-    /* Mobil düzeltmeler */
-    @@media (max-width: 992px) {
-        .app-shell { display: flex; flex-direction: column; }
-        .dashboard-grid { grid-template-columns: 1fr !important; }
-        .row-reverse-mobile { flex-direction: column-reverse; }
+    /* Mobil: sidebar overlay */
+    @@media (max-width: 767px) {
+        .chat-container { height: calc(100vh - 60px); border-radius: 0 !important; margin-top: 0 !important; }
+        .chat-sidebar {
+            position: fixed !important;
+            left: -100% !important;
+            top: 0 !important;
+            height: 100vh !important;
+            z-index: 1300;
+            width: 280px !important;
+            min-width: 280px !important;
+            transition: left 0.3s ease;
+            box-shadow: 4px 0 20px rgba(0,0,0,0.2);
+        }
+        .chat-sidebar.sidebar-open { left: 0 !important; }
+        .sidebar-dim-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.4);
+            z-index: 1250;
+        }
+        .sidebar-dim-overlay.open { display: block; }
+        #sidebarToggleBtn { display: flex !important; }
+    }
+    @@media (min-width: 768px) {
+        #sidebarToggleBtn { display: none !important; }
     }
 </style>
 
-<div class="chat-container d-flex mx-auto shadow-sm" style="max-width: 1400px; height: calc(100vh - 100px); background: #fff; border-radius: 16px; overflow: hidden; border: 1px solid #e5e7eb; margin-top: 10px;">
+<div class="chat-container d-flex mx-auto shadow-sm" style="max-width: 1400px; background: #fff; border-radius: 16px; overflow: hidden; border: 1px solid #e5e7eb; margin-top: 10px;">
+    <!-- Sidebar dim overlay (mobile only) -->
+    <div class="sidebar-dim-overlay" id="sidebarDimOverlay"></div>
     
     <!-- ── Sidebar ── -->
-    <div class="chat-sidebar bg-light d-flex flex-column p-0" style="width:280px; min-width:260px; border-right:1px solid #e5e7eb; transition: transform 0.3s ease;">
+    <div class="chat-sidebar bg-light d-flex flex-column p-0" id="chatSidebar" style="width:280px; min-width:260px; border-right:1px solid #e5e7eb;">
         <div class="p-4 border-bottom bg-white d-flex align-items-center justify-content-between">
             <h6 class="mb-0 fw-bold text-dark d-flex align-items-center">
                 <i data-lucide="message-square" class="me-2" style="color:#059669;" size="18"></i> Sohbetler
@@ -265,6 +292,25 @@
     function getAntiForgeryToken() {
         return document.querySelector('input[name="__RequestVerificationToken"]')?.value ?? '';
     }
+
+    // ── Mobile Sidebar Toggle ──────────────────────────────────
+    const chatSidebar = document.getElementById('chatSidebar');
+    const sidebarDimOverlay = document.getElementById('sidebarDimOverlay');
+    const sidebarToggleBtn = document.getElementById('sidebarToggleBtn');
+
+    function openSidebar() {
+        chatSidebar?.classList.add('sidebar-open');
+        sidebarDimOverlay?.classList.add('open');
+        document.body.style.overflow = 'hidden';
+    }
+    function closeSidebar() {
+        chatSidebar?.classList.remove('sidebar-open');
+        sidebarDimOverlay?.classList.remove('open');
+        document.body.style.overflow = '';
+    }
+
+    if (sidebarToggleBtn) sidebarToggleBtn.addEventListener('click', openSidebar);
+    if (sidebarDimOverlay) sidebarDimOverlay.addEventListener('click', closeSidebar);
 
     function appendMessage(role, content) {
         const wrapper = document.createElement('div');

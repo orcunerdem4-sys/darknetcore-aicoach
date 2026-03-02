@@ -16,6 +16,7 @@ public class ApplicationDbContext : DbContext
     public DbSet<UploadedFile> UploadedFiles { get; set; }
     public DbSet<ChatSession> ChatSessions { get; set; }
     public DbSet<ChatMessage> ChatMessages { get; set; }
+    public DbSet<FeedbackNote> FeedbackNotes { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

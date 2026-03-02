@@ -7,7 +7,7 @@ namespace DarkNetCore.Services;
 public class GeminiService
 {
     private readonly string _apiKey;
-    private const string ModelName = "gemini-2.5-flash";
+    private const string ModelName = "gemini-2.0-flash";
     private readonly HttpClient _httpClient;
 
     public GeminiService(IConfiguration config, HttpClient httpClient)
