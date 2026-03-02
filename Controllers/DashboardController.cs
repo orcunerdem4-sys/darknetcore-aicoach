@@ -64,6 +64,33 @@ public class DashboardController : Controller
         await _dataService.DeleteTaskAsync(id);
         return Json(new { success = true });
     }
+
+    [HttpPost]
+    public IActionResult SaveFeedback([FromBody] FeedbackNote note)
+    {
+        var filePath = Path.Combine(Directory.GetCurrentDirectory(), "App_Data", "feedbacks.json");
+        Directory.CreateDirectory(Path.GetDirectoryName(filePath)!);
+        var notes = new List<FeedbackNote>();
+        if (System.IO.File.Exists(filePath))
+        {
+            notes = System.Text.Json.JsonSerializer.Deserialize<List<FeedbackNote>>(System.IO.File.ReadAllText(filePath)) ?? new List<FeedbackNote>();
+        }
+        note.Id = Guid.NewGuid().ToString();
+        note.CreatedAt = DateTime.UtcNow;
+        notes.Add(note);
+        System.IO.File.WriteAllText(filePath, System.Text.Json.JsonSerializer.Serialize(notes));
+        return Json(new { success = true });
+    }
+
+    [HttpGet]
+    public IActionResult GetFeedbacks()
+    {
+        var filePath = Path.Combine(Directory.GetCurrentDirectory(), "App_Data", "feedbacks.json");
+        if (!System.IO.File.Exists(filePath)) return Json(new List<FeedbackNote>());
+        var notes = System.Text.Json.JsonSerializer.Deserialize<List<FeedbackNote>>(System.IO.File.ReadAllText(filePath));
+        return Json(notes?.OrderByDescending(n => n.CreatedAt) ?? new List<FeedbackNote>().OrderBy(n=>1));
+    }
+
     
     [HttpPost]
     public IActionResult OptimizeSchedule([FromBody] DateTime date)
@@ -708,6 +735,13 @@ public class DashboardController : Controller
         public string WebViewLink { get; set; } = string.Empty;
         public string MimeType { get; set; } = string.Empty;
         public List<string> Parents { get; set; } = new List<string>();
+    }
+
+    public class FeedbackNote
+    {
+        public string? Id { get; set; }
+        public string Content { get; set; } = string.Empty;
+        public DateTime CreatedAt { get; set; }
     }
 }
 

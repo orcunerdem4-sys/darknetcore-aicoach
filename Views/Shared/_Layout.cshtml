@@ -1,5 +1,5 @@
 ﻿<!DOCTYPE html>
-<html lang="en" data-theme="dark">
+<html lang="en">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -13,17 +13,17 @@
     <link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/main.min.css" rel="stylesheet">
     <style>
         :root {
-            --fc-border-color: rgba(255, 255, 255, 0.1);
-            --fc-page-bg-color: #1a1a1a;
-            --fc-neutral-bg-color: rgba(255, 255, 255, 0.05);
-            --fc-list-event-hover-bg-color: rgba(255, 255, 255, 0.1);
-            --fc-today-bg-color: rgba(255, 255, 255, 0.05) !important;
+            --fc-border-color: #e5e7eb;
+            --fc-page-bg-color: transparent;
+            --fc-neutral-bg-color: #f3f4f6;
+            --fc-list-event-hover-bg-color: #f9fafb;
+            --fc-today-bg-color: #f0fdf4 !important;
         }
     </style>
     <link rel="stylesheet" href="~/css/custom_dashboard.css" asp-append-version="true" />
     @await RenderSectionAsync("Styles", required: false)
 </head>
-<body class="dark-theme">
+<body class="light-theme">
     <div class="app-shell">
         <header class="main-header glass-panel">
             <div class="logo-area">
@@ -43,12 +43,12 @@
             <div class="user-actions">
                 @if (User.Identity != null && User.Identity.IsAuthenticated)
                 {
-                    <span class="text-light me-3 fw-bold">@User.Identity.Name</span>
-                    <a asp-controller="Account" asp-action="Logout" class="btn btn-outline-light glow-effect">Logout</a>
+                    <span class="text-dark me-3 fw-bold">@User.Identity.Name</span>
+                    <a asp-controller="Account" asp-action="Logout" class="btn btn-outline-danger glow-effect">Logout</a>
                 }
                 else
                 {
-                    <a asp-controller="Account" asp-action="Login" class="btn btn-outline-light me-2 glow-effect">Login</a>
+                    <a asp-controller="Account" asp-action="Login" class="btn btn-outline-primary me-2 glow-effect">Login</a>
                     <a asp-controller="Account" asp-action="Register" class="btn btn-primary glow-effect">Sign Up</a>
                 }
             </div>
@@ -62,11 +62,101 @@
             </div>
         </footer>
     </div>
+
+    <!-- Floating Feedback/Notes Button -->
+    <button class="btn btn-primary rounded-circle shadow-lg d-flex align-items-center justify-content-center" 
+            type="button" data-bs-toggle="offcanvas" data-bs-target="#feedbackOffcanvas" aria-controls="feedbackOffcanvas"
+            style="position: fixed; bottom: 30px; right: 30px; width: 60px; height: 60px; z-index: 1050; border: 2px solid white; transition: transform 0.2s;">
+        <i data-lucide="pen-tool" size="24" class="text-white"></i>
+    </button>
+
+    <!-- Feedback Offcanvas Panel -->
+    <div class="offcanvas offcanvas-end shadow" tabindex="-1" id="feedbackOffcanvas" aria-labelledby="feedbackOffcanvasLabel" style="width: 400px; border-left: none;">
+        <div class="offcanvas-header text-white" style="background: #059669;">
+            <h5 class="offcanvas-title d-flex align-items-center fw-bold" id="feedbackOffcanvasLabel">
+                <i data-lucide="notebook" class="me-2"></i> Akıllı Notlar & Fikirler
+            </h5>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+        </div>
+        <div class="offcanvas-body d-flex flex-column" style="background-color: #f8fafc;">
+            <p class="small text-secondary mb-3">Mobil cihazdayken aklınıza gelen geliştirmeleri veya ders notlarını buraya hızlıca kaydedebilirsiniz.</p>
+            
+            <div class="mb-3">
+                <textarea id="feedbackInput" class="form-control border-0 shadow-sm" rows="3" placeholder="Yeni bir not yazın..." style="border-radius: 12px; padding: 15px; resize: none;"></textarea>
+            </div>
+            <button class="btn btn-primary rounded-pill mb-4 w-100 fw-bold shadow-sm" onclick="saveFeedback()">
+                <i data-lucide="save" size="16" class="me-1"></i> Notu Kaydet
+            </button>
+
+            <h6 class="fw-bold text-dark border-bottom pb-2 mb-3 d-flex align-items-center">
+                <i data-lucide="history" size="16" class="me-2"></i> Kaydedilen Notlar
+            </h6>
+            <div id="feedbackList" class="flex-grow-1 overflow-auto d-flex flex-column gap-3 mb-2 pe-1">
+                <!-- Notes will be loaded here -->
+                <div class="text-center text-muted small mt-4">Yükleniyor...</div>
+            </div>
+        </div>
+    </div>
+
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     <script src="~/js/site.js" asp-append-version="true"></script>
     <script>
         lucide.createIcons();
+
+        // Feedback Panel Logic
+        const offcanvasElement = document.getElementById('feedbackOffcanvas');
+        if(offcanvasElement) {
+            offcanvasElement.addEventListener('show.bs.offcanvas', loadFeedbacks);
+        }
+
+        async function loadFeedbacks() {
+            const list = document.getElementById('feedbackList');
+            try {
+                const res = await fetch('/Dashboard/GetFeedbacks');
+                const data = await res.json();
+                
+                list.innerHTML = '';
+                if(data.length === 0) {
+                    list.innerHTML = '<div class="text-center text-muted small mt-4 p-4 bg-white rounded border">Henüz not eklenmemiş.</div>';
+                    return;
+                }
+
+                data.forEach(note => {
+                    const date = new Date(note.createdAt).toLocaleString('tr-TR', { day: 'numeric', month: 'short', hour:'2-digit', minute:'2-digit' });
+                    const div = document.createElement('div');
+                    div.className = 'bg-white p-3 rounded shadow-sm border position-relative';
+                    div.innerHTML = `<p class="mb-2 text-dark" style="font-size: 0.95rem; line-height: 1.5; white-space: pre-wrap;">${note.content.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</p>
+                                     <small class="text-secondary opacity-75" style="font-size: 0.75rem;"><i data-lucide="clock" size="10" class="me-1"></i>${date}</small>`;
+                    list.appendChild(div);
+                });
+                lucide.createIcons();
+            } catch (err) {
+                list.innerHTML = '<div class="text-danger small">Notlar yüklenirken hata oluştu.</div>';
+            }
+        }
+
+        async function saveFeedback() {
+            const input = document.getElementById('feedbackInput');
+            const content = input.value.trim();
+            if(!content) return;
+
+            try {
+                const res = await fetch('/Dashboard/SaveFeedback', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ content: content })
+                });
+                if(res.ok) {
+                    input.value = '';
+                    loadFeedbacks();
+                } else {
+                    alert('Kaydetme başarısız oldu.');
+                }
+            } catch (err) {
+                alert('Sunucuya ulaşılamadı.');
+            }
+        }
     </script>
     @await RenderSectionAsync("Scripts", required: false)
 </body>

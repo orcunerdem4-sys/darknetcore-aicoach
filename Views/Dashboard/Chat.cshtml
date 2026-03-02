@@ -5,59 +5,52 @@
     var currentSessionId = ViewBag.CurrentSessionId as string ?? "";
 }
 
+<!-- Sayfa stili ve medya sorguları ayarlandı. Ekstra tasarım özelleştirmeleri -->
 <style>
-    body { overflow: hidden; }
-    .session-item { color: rgba(255,255,255,0.75); transition: background 0.2s; }
-    .session-item:hover { background: rgba(255,255,255,0.08); color: white; }
-    .active-session { background: rgba(108,99,255,0.25) !important; color: white !important; border-left: 3px solid #6c63ff; }
+    body { background-color: #f0fdf4; overflow-x: hidden; }
     .chat-bubble-wrapper { display: flex; align-items: flex-end; }
     .user-bubble-wrapper { justify-content: flex-end; }
     .ai-bubble-wrapper { justify-content: flex-start; }
-    .chat-bubble { max-width: 70%; border-radius: 16px; padding: 10px 14px; position: relative; }
-    .user-bubble { background: linear-gradient(135deg, #6c63ff, #48cae4); color: white; border-bottom-right-radius: 4px; }
-    .ai-bubble { background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.9); border-bottom-left-radius: 4px; border: 1px solid rgba(255,255,255,0.1); }
+    .chat-bubble { max-width: 85%; padding: 12px 16px; position: relative; font-size: 0.95rem; }
+    .user-bubble { background: #f3f4f6; color: #1f2937; border-radius: 12px 12px 0 12px; }
+    .ai-bubble { background: #d1fae5; color: #064e3b; border-radius: 12px 12px 12px 0; border: 1px solid #a7f3d0; }
     .bubble-content { line-height: 1.5; word-break: break-word; }
-    .bubble-content h1,.bubble-content h2,.bubble-content h3 { font-size: 1rem; font-weight: bold; margin: 8px 0 4px; }
-    .bubble-content ul,.bubble-content ol { padding-left: 1.2rem; margin: 4px 0; }
-    .bubble-content code { background: rgba(0,0,0,0.3); padding: 1px 4px; border-radius: 3px; font-size: 0.85em; }
-    .bubble-time { font-size: 0.68rem; opacity: 0.6; margin-top: 4px; text-align: right; }
-    .typing-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: rgba(255,255,255,0.5); margin: 0 2px; animation: bounce 1.2s infinite; }
+    .typing-dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: #059669; margin: 0 2px; animation: bounce 1.2s infinite; }
     .typing-dot:nth-child(2) { animation-delay: 0.2s; }
     .typing-dot:nth-child(3) { animation-delay: 0.4s; }
-    @keyframes bounce { 0%,60%,100%{transform:translateY(0)} 30%{transform:translateY(-8px)} }
-    .suggestion-btn { font-size: 0.8rem; border-radius: 20px; }
-
-    /* Mobil Uyum (Responsive) */
-    @media (max-width: 768px) {
-        .chat-sidebar {
-            position: absolute;
-            z-index: 1050;
-            height: 100%;
-            transform: translateX(-100%);
-            transition: transform 0.3s ease;
-            background: rgba(15, 15, 20, 0.95); /* Yarı saydam koyu arka plan */
-            backdrop-filter: blur(10px);
-        }
-        .chat-sidebar.show {
-            transform: translateX(0);
-        }
-        .chat-bubble { max-width: 90%; }
-        /* Sidebar açıldığında arkadaki chat tıklanmasını/seçilmesini engellemek için overlay eklenebilir ama absolute menü yeterli. */
+    @@keyframes bounce { 0%,60%,100%{transform:translateY(0)} 30%{transform:translateY(-6px)} }
+    
+    .panel-card { background: #fff; border-radius: 16px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); border: 1px solid #e5e7eb; overflow: hidden; }
+    .stat-box { background: #059669; color: white; border-radius: 16px; padding: 20px; box-shadow: 0 10px 15px -3px rgba(5,150,105,0.2); }
+    .feature-item { padding: 20px; text-align: left; background: #fff; border-radius: 12px; border: 1px solid #e5e7eb; transition: transform 0.2s; }
+    .feature-item:hover { transform: translateY(-3px); box-shadow: 0 4px 12px rgba(5,150,105,0.08); border-color: #34d399; }
+    .feature-icon-box { display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 40px; border-radius: 10px; background: #ecfdf5; color: #059669; margin-bottom: 12px; }
+    .action-btn { background: #fff; border: 1px solid #e5e7eb; padding: 12px 16px; border-radius: 10px; color: #4b5563; font-weight: 500; text-align: left; width: 100%; transition: all 0.2s; display: flex; align-items: center; }
+    .action-btn:hover { border-color: #059669; color: #059669; background: #ecfdf5; }
+    .action-btn i { margin-right: 12px; color: #059669; }
+    
+    /* Mobil düzeltmeler */
+    @@media (max-width: 992px) {
+        .app-shell { display: flex; flex-direction: column; }
+        .dashboard-grid { grid-template-columns: 1fr !important; }
+        .row-reverse-mobile { flex-direction: column-reverse; }
     }
 </style>
 
-<div class="chat-page d-flex" style="height: calc(100vh - 70px); overflow: hidden;">
-
+<div class="chat-container d-flex mx-auto shadow-sm" style="max-width: 1400px; height: calc(100vh - 100px); background: #fff; border-radius: 16px; overflow: hidden; border: 1px solid #e5e7eb; margin-top: 10px;">
+    
     <!-- ── Sidebar ── -->
-    <div class="chat-sidebar glass-panel d-flex flex-column p-3" style="width:280px; min-width:240px; border-radius:0; border-right:1px solid rgba(255,255,255,0.08);">
-        <div class="d-flex align-items-center justify-content-between mb-3">
-            <h6 class="mb-0 fw-bold"><i data-lucide="message-square" class="me-2" size="16"></i>Sohbetler</h6>
-            <button class="btn btn-sm btn-primary" id="newChatBtn" title="Yeni sohbet">
-                <i data-lucide="plus" size="14"></i>
+    <div class="chat-sidebar bg-light d-flex flex-column p-0" style="width:280px; min-width:260px; border-right:1px solid #e5e7eb; transition: transform 0.3s ease;">
+        <div class="p-4 border-bottom bg-white d-flex align-items-center justify-content-between">
+            <h6 class="mb-0 fw-bold text-dark d-flex align-items-center">
+                <i data-lucide="message-square" class="me-2" style="color:#059669;" size="18"></i> Sohbetler
+            </h6>
+            <button class="btn btn-sm btn-outline-success d-flex align-items-center justify-content-center" id="newChatBtn" title="Yeni sohbet" style="width:32px; height:32px; padding:0; border-radius: 8px;">
+                <i data-lucide="plus" size="16"></i>
             </button>
         </div>
 
-        <div class="session-list flex-grow-1" style="overflow-y:auto;">
+        <div class="session-list flex-grow-1 p-2" style="overflow-y:auto; background: #fdfdfd;">
             @if (!sessions.Any())
             {
                 <p class="text-muted small text-center mt-4">Henüz sohbet yok.<br>Yeni bir sohbet başlat.</p>
@@ -65,54 +58,52 @@
             @foreach (var s in sessions)
             {
                 <a href="@Url.Action("Chat", new { sessionId = s.Id })"
-                   class="session-item d-flex align-items-center justify-content-between p-2 rounded mb-1 text-decoration-none @(s.Id == currentSessionId ? "active-session" : "")">
-                    <span class="text-truncate small">@s.Title</span>
-                    <span class="text-muted" style="font-size:0.7rem; white-space:nowrap;">@s.StartedAt.ToString("dd MMM")</span>
+                   class="session-item d-flex flex-column p-3 rounded mb-2 text-decoration-none @(s.Id == currentSessionId ? "active-session" : "")" style="border: 1px solid transparent; transition: all 0.2s;">
+                    <span class="text-truncate fw-medium mb-1 text-dark" style="font-size: 0.9rem;">@s.Title</span>
+                    <span class="text-secondary" style="font-size:0.75rem;">@s.StartedAt.ToString("dd MMM HH:mm")</span>
                 </a>
             }
         </div>
-
-        <div class="mt-3 pt-3" style="border-top:1px solid rgba(255,255,255,0.08);">
-            <a asp-action="Index" class="btn btn-sm btn-outline-secondary w-100">
-                <i data-lucide="layout-dashboard" size="14" class="me-1"></i> Dashboard
+        <div class="p-3 bg-white border-top">
+            <a asp-action="Index" class="btn btn-outline-secondary w-100 d-flex align-items-center justify-content-center gap-2" style="border-radius: 10px;">
+                <i data-lucide="layout-dashboard" size="16"></i> Panele Dön
             </a>
         </div>
     </div>
 
     <!-- ── Main Chat Area ── -->
-    <div class="chat-main flex-grow-1 d-flex flex-column" style="min-width:0;">
+    <div class="chat-main flex-grow-1 d-flex flex-column position-relative" style="background: #ffffff; min-width:0;">
 
         <!-- Header -->
-        <div class="chat-header d-flex align-items-center px-4 py-3" style="border-bottom:1px solid rgba(255,255,255,0.08); background:rgba(0,0,0,0.2);">
+        <div class="chat-header d-flex align-items-center px-4 py-3 bg-white border-bottom">
             <button class="btn btn-sm btn-outline-secondary d-md-none me-3" id="sidebarToggleBtn" title="Sohbetler">
                 <i data-lucide="menu" size="20"></i>
             </button>
-            <div class="ai-avatar me-3" style="width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,#6c63ff,#48cae4); display:flex;align-items:center;justify-content:center;">
-                <i data-lucide="bot" size="20" class="text-white"></i>
+            <div class="ai-avatar me-3" style="width:40px;height:40px;border-radius:12px;background:#ecfdf5; display:flex;align-items:center;justify-content:center; border: 1px solid #a7f3d0">
+                <i data-lucide="bot" size="24" style="color:#059669;"></i>
             </div>
             <div>
-                <h6 class="mb-0 fw-bold">AI Coach</h6>
-                <small class="text-success">● Çevrimiçi</small>
-            </div>
-            <div class="ms-auto d-flex gap-2">
-                <button class="btn btn-sm btn-outline-secondary" id="clearContextBtn" title="Bağlam temizle">
-                    <i data-lucide="x-circle" size="14"></i>
-                </button>
+                <h6 class="mb-0 fw-bold text-dark fs-5">Koçluk Oturumu</h6>
+                <small class="text-success fw-medium d-flex align-items-center"><span style="display:inline-block;width:8px;height:8px;background:#10b981;border-radius:50%;margin-right:6px;"></span> Aktif Bağlantı</small>
             </div>
         </div>
 
         <!-- Messages -->
-        <div id="chatMessages" class="flex-grow-1 px-4 py-3" style="overflow-y:auto;">
+        <div id="chatMessages" class="flex-grow-1 p-4" style="overflow-y:auto; scroll-behavior: smooth;">
             @if (!messages.Any())
             {
                 <div class="text-center mt-5 text-muted" id="emptyState">
-                    <div class="mb-3" style="font-size:3rem;">🤖</div>
-                    <h5>AI Coach'a merhaba de!</h5>
-                    <p class="small">Ders planı oluşturma, dosya analizi, takvim optimizasyonu ve daha fazlası için sorabilirsin.</p>
+                    <div class="mb-3 d-flex justify-content-center">
+                        <div style="width: 80px; height: 80px; background: #ecfdf5; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #059669;">
+                            <i data-lucide="sparkles" size="40"></i>
+                        </div>
+                    </div>
+                    <h4 class="text-dark fw-bold mb-2">AI Koç'a Merhaba De!</h4>
+                    <p class="text-secondary mb-4" style="max-width: 400px; margin: 0 auto;">Ders planı oluşturma, dosya analizi, takvim optimizasyonu ve stratejik hedefler için buradayım.</p>
                     <div class="d-flex flex-wrap gap-2 justify-content-center mt-4">
-                        <button class="btn btn-sm btn-outline-primary suggestion-btn">📅 Bu haftaki derslerimi planla</button>
-                        <button class="btn btn-sm btn-outline-primary suggestion-btn">📚 Hangi derse öncelik vermeliyim?</button>
-                        <button class="btn btn-sm btn-outline-primary suggestion-btn">⏰ Çalışma programı öner</button>
+                        <button class="btn btn-outline-success suggestion-btn rounded-pill px-4">📅 Bu haftaki planım nedir?</button>
+                        <button class="btn btn-outline-success suggestion-btn rounded-pill px-4">📚 Sınavlara nasıl hazırlanmalıyım?</button>
+                        <button class="btn btn-outline-success suggestion-btn rounded-pill px-4">⏰ Bana bir çalışma programı yap</button>
                     </div>
                 </div>
             }
@@ -120,27 +111,27 @@
             {
                 @foreach (var msg in messages)
                 {
-                    <div class="chat-bubble-wrapper @(msg.Role == "user" ? "user-bubble-wrapper" : "ai-bubble-wrapper") mb-3">
+                    <div class="chat-bubble-wrapper @(msg.Role == "user" ? "user-bubble-wrapper" : "ai-bubble-wrapper") mb-4">
                         @if (msg.Role != "user")
                         {
-                            <div class="ai-avatar-sm me-2" style="width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,#6c63ff,#48cae4);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-                                <i data-lucide="bot" size="14" class="text-white"></i>
+                            <div class="ai-avatar-sm me-3 mt-1" style="width:32px;height:32px;border-radius:8px;background:#ecfdf5;display:flex;align-items:center;justify-content:center;flex-shrink:0; border: 1px solid #a7f3d0">
+                                <i data-lucide="bot" size="18" style="color:#059669;"></i>
                             </div>
                         }
-                        <div class="chat-bubble @(msg.Role == "user" ? "user-bubble" : "ai-bubble")">
+                        <div class="chat-bubble @(msg.Role == "user" ? "user-bubble" : "ai-bubble") shadow-sm" style="font-size: 1rem; line-height: 1.6; padding: 14px 20px;">
                             <div class="bubble-content" data-markdown="@msg.Content.Replace("\"", "&quot;")">@msg.Content</div>
-                            <div class="bubble-time">@msg.SentAt.ToString("HH:mm")</div>
+                            <div class="bubble-time mt-2 opacity-50" style="font-size: 0.75rem; text-align: right;">@msg.SentAt.ToString("HH:mm")</div>
                         </div>
                     </div>
                 }
             }
 
             <!-- Typing indicator -->
-            <div id="typingIndicator" class="chat-bubble-wrapper ai-bubble-wrapper mb-3 d-none">
-                <div class="ai-avatar-sm me-2" style="width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,#6c63ff,#48cae4);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-                    <i data-lucide="bot" size="14" class="text-white"></i>
+            <div id="typingIndicator" class="chat-bubble-wrapper ai-bubble-wrapper mb-4 d-none">
+                <div class="ai-avatar-sm me-3 mt-1" style="width:32px;height:32px;border-radius:8px;background:#ecfdf5;display:flex;align-items:center;justify-content:center;flex-shrink:0; border: 1px solid #a7f3d0">
+                    <i data-lucide="bot" size="18" style="color:#059669;"></i>
                 </div>
-                <div class="ai-bubble" style="padding:12px 16px;">
+                <div class="ai-bubble shadow-sm" style="padding:16px 20px;">
                     <span class="typing-dot"></span>
                     <span class="typing-dot"></span>
                     <span class="typing-dot"></span>
@@ -148,24 +139,24 @@
             </div>
         </div>
 
-        <!-- Input -->
-        <div class="chat-input-area px-4 py-3" style="border-top:1px solid rgba(255,255,255,0.08); background:rgba(0,0,0,0.2);">
-            <div class="d-flex align-items-end gap-3">
-                <button type="button" class="btn btn-outline-secondary" id="attachBtn" style="border-radius:12px; width:48px; height:48px; display:flex;align-items:center;justify-content:center; flex-shrink:0;">
-                    <i data-lucide="paperclip" size="18"></i>
+        <!-- Input Area -->
+        <div class="chat-input-area p-4 bg-white border-top">
+            <div class="d-flex align-items-end gap-3 position-relative">
+                <button type="button" class="btn btn-light border" id="attachBtn" style="border-radius:12px; width:52px; height:52px; display:flex;align-items:center;justify-content:center; flex-shrink:0; transition: all 0.2s;" title="Dosya Ekle">
+                    <i data-lucide="paperclip" size="20" class="text-secondary"></i>
                 </button>
                 <input type="file" id="chatFileInput" class="d-none" />
                 <div class="flex-grow-1">
-                    <textarea id="chatInput" class="form-control custom-input" rows="1"
-                        placeholder="AI Coach'a bir şey sor... (Shift+Enter = yeni satır)"
-                        style="resize:none; border-radius:12px; max-height:120px;"></textarea>
+                    <textarea id="chatInput" class="form-control" rows="1"
+                        placeholder="AI Koç'a bir şey sor... (Shift+Enter = alt satır)"
+                        style="resize:none; border-radius:12px; max-height:150px; padding: 14px 20px; font-size: 1rem; border: 1px solid #cbd5e1; box-shadow: 0 2px 4px rgba(0,0,0,0.02);"></textarea>
                 </div>
-                <button id="sendBtn" class="btn btn-primary" style="border-radius:12px; width:48px; height:48px; display:flex;align-items:center;justify-content:center; flex-shrink:0;">
-                    <i data-lucide="send" size="18"></i>
+                <button id="sendBtn" class="btn text-white" style="background:#059669; border-radius:12px; width:52px; height:52px; display:flex;align-items:center;justify-content:center; flex-shrink:0; box-shadow: 0 4px 10px rgba(5,150,105,0.3);" title="Gönder">
+                    <i data-lucide="send" size="20"></i>
                 </button>
             </div>
-            <div class="d-flex gap-2 mt-2" id="contextBadges">
-                <small class="text-muted">Bağlam: <span id="contextInfo">Yok</span></small>
+            <div class="d-flex gap-2 mt-2 px-1" id="contextBadges">
+                <small class="text-secondary fw-medium"><i data-lucide="link" size="12" class="me-1"></i>Ekli Dosya: <span id="contextInfo" class="text-dark">Yok</span></small>
             </div>
         </div>
     </div>
@@ -185,27 +176,17 @@
     const attachBtn = document.getElementById('attachBtn');
     const chatFileInput = document.getElementById('chatFileInput');
     const contextInfo = document.getElementById('contextInfo');
-    const typingIndicator = document.getElementById('typingIndicator');
-    const sidebarToggleBtn = document.getElementById('sidebarToggleBtn');
-    const chatSidebar = document.querySelector('.chat-sidebar');
+    const newChatBtn = document.getElementById('newChatBtn');
 
     let attachedFileIds = [];
 
-    // Mobile Sidebar Toggle
-    if (sidebarToggleBtn && chatSidebar) {
-        sidebarToggleBtn.addEventListener('click', () => {
-            chatSidebar.classList.toggle('show');
-        });
-        
-        // Chat ana ekranına tıklandığında sidebar'ı kapat (eğer açıksa ve mobilse)
-        document.querySelector('.chat-main').addEventListener('click', (e) => {
-            if (window.innerWidth <= 768 && chatSidebar.classList.contains('show')) {
-                // Sadece Header'daki butona tıklamadığından emin ol
-                if(!e.target.closest('#sidebarToggleBtn')) {
-                    chatSidebar.classList.remove('show');
-                }
-            }
-        });
+    // Scroll chat to bottom initially
+    if (chatMessages) {
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+
+    if(newChatBtn) {
+        newChatBtn.addEventListener('click', () => { window.location.href = '/Dashboard/Chat'; });
     }
 
     // Attach File Logic
