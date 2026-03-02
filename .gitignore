@@ -25,7 +25,8 @@ bld/
 .idea/
 .vscode/
 
-# Config files
+# Config files with secrets - NEVER commit these
+appsettings.json
 appsettings.Development.json
 appsettings.Local.json
 
