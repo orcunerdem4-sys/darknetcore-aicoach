@@ -102,11 +102,26 @@ public class DatabaseService
         var file = await _context.UploadedFiles.FindAsync(id);
         if (file != null)
         {
-            // Cascade delete children manually since RESTRICT was used to prevent cycles
-            var children = await _context.UploadedFiles.Where(f => f.ParentId == id).ToListAsync();
-            _context.UploadedFiles.RemoveRange(children);
+            // Find all descendants recursively to avoid FK constraints
+            var allFilesToDelete = new List<UploadedFile> { file };
+            var queue = new Queue<string>();
+            queue.Enqueue(id);
 
-            _context.UploadedFiles.Remove(file);
+            while (queue.Count > 0)
+            {
+                var currentId = queue.Dequeue();
+                var children = await _context.UploadedFiles.Where(f => f.ParentId == currentId).ToListAsync();
+                foreach (var child in children)
+                {
+                    allFilesToDelete.Add(child);
+                    queue.Enqueue(child.Id);
+                }
+            }
+
+            // Reverse the list so leaf nodes (children) are deleted before their parents
+            allFilesToDelete.Reverse();
+
+            _context.UploadedFiles.RemoveRange(allFilesToDelete);
             await _context.SaveChangesAsync();
         }
     }
