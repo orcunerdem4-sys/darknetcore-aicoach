@@ -76,43 +76,22 @@
 
         <!-- Right Sidebar (Task Management & AI Chat) -->
         <div class="col-lg-4 d-flex flex-column gap-4">
-            
-            <!-- Quick Task Add -->
-            <div class="glass-panel p-4">
-                <h5 class="mb-3"><i data-lucide="plus-circle" class="me-2"></i>New Task</h5>
-                <form id="addTaskForm">
-                    <div class="mb-2">
-                        <input type="text" class="form-control custom-input" id="taskTitle" placeholder="Task title..." required>
-                    </div>
-                    <div class="mb-2">
-                        <textarea class="form-control custom-input" id="taskDesc" rows="2" placeholder="Description..."></textarea>
-                    </div>
-                    <div class="row g-2 mb-3">
-                        <div class="col-6">
-                            <input type="datetime-local" class="form-control custom-input" id="taskDate" required>
-                        </div>
-                        <div class="col-6">
-                            <select class="form-select custom-input" id="taskPriority">
-                                <option value="0">Low Priority</option>
-                                <option value="1" selected>Medium Priority</option>
-                                <option value="2">High Priority</option>
-                            </select>
-                        </div>
-                    </div>
-                    <button type="submit" class="btn btn-primary w-100">Add to Schedule</button>
-                </form>
-            </div>
 
             <!-- Upcoming List -->
-            <div class="glass-panel p-4 flex-grow-1" style="min-height: 300px; max-height: 400px; overflow-y: auto;">
-                <h5 class="mb-3"><i data-lucide="list" class="me-2"></i>Upcoming</h5>
+            <div class="glass-panel p-4 flex-grow-1" style="min-height: 300px; max-height: 350px; overflow-y: auto;">
+                <h5 class="mb-3 d-flex justify-content-between align-items-center">
+                    <span><i data-lucide="list" class="me-2"></i>Upcoming</span>
+                    <button class="btn btn-sm btn-primary rounded-circle p-1" data-bs-toggle="modal" data-bs-target="#addTaskModal" title="Hızlı Görev Ekle">
+                        <i data-lucide="plus" size="16"></i>
+                    </button>
+                </h5>
                 <div id="taskList" class="list-group list-group-flush">
                     <!-- Tasks will be loaded here via JS -->
                 </div>
             </div>
 
             <!-- AI Chat Widget -->
-            <div class="glass-panel p-3" style="height: 300px; display: flex; flex-direction: column;">
+            <div class="glass-panel p-3" style="height: 350px; display: flex; flex-direction: column;">
                 <div class="d-flex justify-content-between align-items-center mb-2">
                     <h6 class="mb-0"><i data-lucide="bot" class="me-2"></i>AI Assistant</h6>
                     <div class="d-flex align-items-center gap-2">
@@ -141,6 +120,46 @@
     </div>
 </div>
 
+<!-- Add Task Modal -->
+<div class="modal fade" id="addTaskModal" tabindex="-1" aria-labelledby="addTaskModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content glass-panel border-0" style="background: rgba(255,255,255,0.95);">
+            <div class="modal-header border-bottom-0 pb-0">
+                <h5 class="modal-title fw-bold text-dark" id="addTaskModalLabel"><i data-lucide="calendar-plus" class="me-2 text-primary"></i>Yeni Görev Ekle</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="addTaskForm">
+                    <div class="mb-3">
+                        <label class="form-label text-secondary small fw-bold mb-1">Başlık</label>
+                        <input type="text" class="form-control" id="taskTitle" placeholder="Görev veya Ders Adı..." required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label text-secondary small fw-bold mb-1">Açıklama / Notlar</label>
+                        <textarea class="form-control" id="taskDesc" rows="2" placeholder="Detaylar..."></textarea>
+                    </div>
+                    <div class="row g-3 mb-4">
+                        <div class="col-sm-6">
+                            <label class="form-label text-secondary small fw-bold mb-1">Tarih & Saat</label>
+                            <input type="datetime-local" class="form-control" id="taskDate" required>
+                        </div>
+                        <div class="col-sm-6">
+                            <label class="form-label text-secondary small fw-bold mb-1">Öncelik Seviyesi</label>
+                            <select class="form-select" id="taskPriority">
+                                <option value="0">Düşük</option>
+                                <option value="1" selected>Orta</option>
+                                <option value="2">Yüksek</option>
+                            </select>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100 py-2 fw-bold" style="border-radius: 12px;">Planla & Takvime Ekle</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
 @section Scripts {
+    <script src="~/lib/fullcalendar/index.global.min.js"></script>
     <script src="~/js/dashboard.js" asp-append-version="true"></script>
 }

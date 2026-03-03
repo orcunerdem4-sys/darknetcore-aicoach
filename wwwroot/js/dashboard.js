@@ -8,13 +8,76 @@ document.addEventListener('DOMContentLoaded', function () {
             center: 'title',
             right: 'dayGridMonth,timeGridWeek,timeGridDay'
         },
-        events: '/Dashboard/GetTasks', // Fetch tasks as events
-        eventClick: function (info) {
-            // Placeholder for edit modal
-            alert('Task: ' + info.event.title);
-        },
+        events: '/Dashboard/GetTasks',
         editable: true,
-        droppable: true
+        droppable: true,
+        selectable: true,
+        selectMirror: true,
+        // Boş bir yere (veya gün aralığına) tıklandğında
+        select: function (info) {
+            // "Zamanı" (info.startStr) taskDate inputuna doldur ve modal'ı manuel göster
+            const dateInput = document.getElementById('taskDate');
+            if (dateInput) {
+                // Remove time part if it's allDay to prevent "invalid date" on datetime-local
+                let defaultDate = info.startStr;
+                if (!info.startStr.includes("T")) {
+                    defaultDate += "T09:00"; // default time
+                }
+                dateInput.value = defaultDate.substring(0, 16); // format: YYYY-MM-DDTHH:mm
+            }
+            var myModal = new bootstrap.Modal(document.getElementById('addTaskModal'));
+            myModal.show();
+        },
+        // Görevin üzerine fare ile gelince (X Butonu - Delete)
+        eventMouseEnter: function (info) {
+            const el = info.el;
+            if (el.querySelector('.fc-event-delete-btn')) return;
+
+            const btn = document.createElement('span');
+            btn.className = 'fc-event-delete-btn bg-danger text-white rounded-circle d-flex align-items-center justify-content-center cursor-pointer shadow-sm';
+            btn.innerHTML = '×';
+            btn.style.position = 'absolute';
+            btn.style.top = '-5px';
+            btn.style.right = '-5px';
+            btn.style.width = '20px';
+            btn.style.height = '20px';
+            btn.style.fontSize = '16px';
+            btn.style.fontWeight = 'bold';
+            btn.style.lineHeight = '1';
+            btn.style.zIndex = '1000';
+            btn.title = 'Sil';
+
+            btn.onclick = function (e) {
+                e.stopPropagation(); // Prevent event Click wrapper
+                if (confirm(`'${info.event.title}' görevini takvimden silmek istediğine emin misin?`)) {
+                    fetch('/Dashboard/DeleteTask/' + info.event.id, {
+                        method: 'POST'
+                    })
+                        .then(response => {
+                            if (response.ok) {
+                                calendar.refetchEvents();
+                                loadTaskList();
+                            } else {
+                                alert('Hata oluştu!');
+                            }
+                        });
+                }
+            };
+            el.appendChild(btn);
+        },
+        // Fareden çıkınca X butonunu kaldır
+        eventMouseLeave: function (info) {
+            const btn = info.el.querySelector('.fc-event-delete-btn');
+            if (btn) {
+                // Silme butonunun üzerine gezinilirken de (örneğin buton sınırı taşmışsa) kapanmaması için gecikme/veya DOM'dan silme
+                // Fakat pratiklik için doğrudan kaldırıyoruz
+                btn.remove();
+            }
+        },
+        // Göreve tıklanınca detay (Edit yapılabilir ama şimdilik alert)
+        eventClick: function (info) {
+            alert('Görev: ' + info.event.title);
+        }
     });
     calendar.render();
 
@@ -44,7 +107,13 @@ document.addEventListener('DOMContentLoaded', function () {
                         calendar.refetchEvents(); // Refresh calendar
                         loadTaskList(); // Refresh list
                         addTaskForm.reset();
-                        alert('Task added successfully!');
+
+                        // Close Modal programmatically
+                        var myModalEl = document.getElementById('addTaskModal');
+                        if (myModalEl) {
+                            var modalInstance = bootstrap.Modal.getInstance(myModalEl);
+                            if (modalInstance) modalInstance.hide();
+                        }
                     } else {
                         alert('Error adding task');
                     }
@@ -62,15 +131,15 @@ document.addEventListener('DOMContentLoaded', function () {
                 tasks.forEach(task => {
                     const item = document.createElement('a');
                     item.className = 'list-group-item list-group-item-action bg-transparent border-secondary d-flex justify-content-between align-items-center mb-1 rounded';
-                    
+
                     // Priority Badge
                     const badgeClass = getPriorityBadge(task.priority);
                     const badgeLabel = getPriorityLabel(task.priority);
-                    
+
                     // Difficulty Tooltip
                     const difficultyScore = task.difficultyScore || 3;
                     const difficultyReason = task.difficultyReason || "Standart görev.";
-                    
+
                     item.innerHTML = `
                         <div class="pe-2">
                             <h6 class="mb-1 text-dark fw-bold" style="font-size: 0.95rem;">${task.title}</h6>
@@ -92,11 +161,11 @@ document.addEventListener('DOMContentLoaded', function () {
                     list.appendChild(item);
                 });
                 lucide.createIcons();
-                
+
                 // Initialize tooltips
                 var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
                 var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
-                  return new bootstrap.Tooltip(tooltipTriggerEl);
+                    return new bootstrap.Tooltip(tooltipTriggerEl);
                 });
             });
     }

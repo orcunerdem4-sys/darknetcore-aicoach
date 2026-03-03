@@ -1,62 +1,112 @@
 @{
-    ViewData["Title"] = "Register - Dopamind";
+    ViewData["Title"] = "Kayıt Ol - Dopamind";
     Layout = "_Layout";
 }
 
-<div class="container py-5 d-flex justify-content-center align-items-center min-vh-100">
-    <div class="card glass-panel p-5 shadow-lg" style="max-width: 450px; width: 100%;">
-        <div class="text-center mb-4">
-            <h2 class="fw-bold text-gradient">Create Account</h2>
-            <p class="text-light">Join Dopamind and organize your success</p>
+<style>
+    body { background: linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 100%); }
+    .login-wrapper {
+        min-height: calc(100vh - 140px);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 2rem 1rem;
+    }
+    .login-card {
+        background: #ffffff;
+        border-radius: 24px;
+        box-shadow: 0 20px 60px rgba(5, 150, 105, 0.12), 0 4px 20px rgba(0,0,0,0.06);
+        padding: 2.5rem;
+        width: 100%;
+        max-width: 420px;
+        border: 1px solid #d1fae5;
+    }
+    .login-logo {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        margin-bottom: 1.5rem;
+    }
+    .login-logo-icon {
+        width: 48px; height: 48px;
+        background: linear-gradient(135deg, #059669, #34d399);
+        border-radius: 14px;
+        display: flex; align-items: center; justify-content: center;
+        color: white;
+    }
+    .login-title { font-size: 1.6rem; font-weight: 700; color: #064e3b; text-align: center; }
+    .login-sub { color: #6b7280; font-size: 0.92rem; text-align: center; margin-bottom: 1.8rem; }
+    .form-label { font-weight: 600; color: #374151; font-size: 0.9rem; margin-bottom: 0.3rem; }
+    .form-control {
+        border: 1.5px solid #e5e7eb;
+        border-radius: 12px;
+        padding: 0.75rem 1rem;
+        font-size: 0.95rem;
+        transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    .form-control:focus {
+        border-color: #059669;
+        box-shadow: 0 0 0 3px rgba(5,150,105,0.12);
+    }
+    .btn-login {
+        background: linear-gradient(135deg, #059669, #10b981);
+        color: white;
+        border: none;
+        border-radius: 12px;
+        padding: 0.8rem;
+        font-weight: 600;
+        font-size: 1rem;
+        width: 100%;
+        transition: all 0.2s;
+        box-shadow: 0 4px 12px rgba(5,150,105,0.3);
+        margin-top: 0.5rem;
+    }
+    .btn-login:hover { transform: translateY(-1px); box-shadow: 0 6px 18px rgba(5,150,105,0.4); color: white; }
+    .signup-link { text-align: center; margin-top: 1.5rem; color: #6b7280; font-size: 0.9rem; }
+    .signup-link a { color: #059669; font-weight: 600; text-decoration: none; }
+    .signup-link a:hover { text-decoration: underline; }
+</style>
+
+<div class="login-wrapper">
+    <div class="login-card">
+        <div class="login-logo">
+            <div class="login-logo-icon">
+                <i data-lucide="brain" style="width:26px;height:26px;"></i>
+            </div>
+            <span style="font-size:1.5rem;font-weight:800;color:#059669;">Dopamind</span>
         </div>
+        <h1 class="login-title">Yeni Hesap Oluştur</h1>
+        <p class="login-sub">Dopamind'a katıl ve başarını planla</p>
 
         @if (!string.IsNullOrEmpty(ViewBag.Error))
         {
-            <div class="alert alert-danger" role="alert">
-                @ViewBag.Error
+            <div class="alert alert-danger rounded-3 py-2 px-3 mb-3" style="font-size:0.9rem;" role="alert">
+                <i data-lucide="alert-circle" style="width:16px;height:16px;margin-right:6px;"></i>@ViewBag.Error
             </div>
         }
 
         <form asp-controller="Account" asp-action="Register" method="post">
             <div class="mb-3">
-                <label for="username" class="form-label text-light">Username</label>
-                <input type="text" class="form-control bg-dark text-light border-secondary" id="username" name="username" required>
+                <label for="username" class="form-label">Kullanıcı Adı</label>
+                <input type="text" class="form-control" id="username" name="username"
+                       placeholder="kullanici_adi" required autocomplete="username">
             </div>
-
             <div class="mb-3">
-                <label for="email" class="form-label text-light">Email Address</label>
-                <input type="email" class="form-control bg-dark text-light border-secondary" id="email" name="email" required>
+                <label for="email" class="form-label">E-Posta Adresi</label>
+                <input type="email" class="form-control" id="email" name="email"
+                       placeholder="ornek@mail.com" required autocomplete="email">
             </div>
-            
-            <div class="mb-4">
-                <label for="password" class="form-label text-light">Password</label>
-                <input type="password" class="form-control bg-dark text-light border-secondary" id="password" name="password" required>
+            <div class="mb-3">
+                <label for="password" class="form-label">Şifre</label>
+                <input type="password" class="form-control" id="password" name="password"
+                       placeholder="••••••••" required autocomplete="new-password">
             </div>
-            
-            <button type="submit" class="btn btn-primary w-100 glow-effect rounded-pill py-2 fw-bold">Sign Up</button>
+            <button type="submit" class="btn-login">Kayıt Ol</button>
         </form>
 
-        <div class="text-center mt-4">
-            <p class="text-light mb-0">Already have an account? <br>
-                <a asp-action="Login" class="text-primary fw-bold text-decoration-none">Log in here</a>
-            </p>
+        <div class="signup-link">
+            Zaten hesabın var mı? <a asp-action="Login">Giriş yap</a>
         </div>
     </div>
 </div>
-
-<style>
-    .text-gradient {
-        background: linear-gradient(135deg, #fff 0%, #a855f7 100%);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-    }
-    
-    .glow-effect {
-        box-shadow: 0 0 15px rgba(124, 58, 237, 0.4);
-        transition: box-shadow 0.3s ease;
-    }
-    
-    .glow-effect:hover {
-        box-shadow: 0 0 25px rgba(124, 58, 237, 0.8);
-    }
-</style>
