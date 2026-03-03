@@ -36,9 +36,12 @@
                 <a asp-controller="Home" asp-action="Index" class="nav-link @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Home" ? "active" : "")">
                     <i data-lucide="home" class="nav-icon"></i> Home
                 </a>
+                @if (User.Identity != null && User.Identity.IsAuthenticated)
+                {
                 <a asp-controller="Dashboard" asp-action="Index" class="nav-link @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Dashboard" ? "active" : "")">
                     <i data-lucide="layout-dashboard" class="nav-icon"></i> Dashboard
                 </a>
+                }
             </nav>
             <div class="user-actions">
                 @if (User.Identity != null && User.Identity.IsAuthenticated)
@@ -75,9 +78,12 @@
             <i data-lucide="brain" size="22"></i> Dopamind
         </div>
         <a href="/" class="nav-link"><i data-lucide="home" class="nav-icon me-2"></i> Ana Sayfa</a>
+        @if (User.Identity != null && User.Identity.IsAuthenticated)
+        {
         <a href="/Dashboard" class="nav-link"><i data-lucide="layout-dashboard" class="nav-icon me-2"></i> Dashboard</a>
         <a href="/Dashboard/Chat" class="nav-link"><i data-lucide="message-circle" class="nav-icon me-2"></i> AI Chat</a>
         <a href="/Dashboard/Files" class="nav-link"><i data-lucide="folder-open" class="nav-icon me-2"></i> Dosyalar</a>
+        }
         <div style="margin-top: auto; border-top: 1px solid var(--border-color); padding-top: 1rem;">
             @if (User.Identity != null && User.Identity.IsAuthenticated)
             {

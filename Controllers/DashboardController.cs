@@ -1,10 +1,12 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using DarkNetCore.Models;
 using DarkNetCore.Data;
 using DarkNetCore.Services;
 
 namespace DarkNetCore.Controllers;
 
+[Authorize]
 public class DashboardController : Controller
 {
     private readonly DatabaseService _dataService;
@@ -583,69 +585,73 @@ public class DashboardController : Controller
 
         string actionPerformed = "";
 
-        // Parse AI JSON Commands if present
-        if (responseText.Contains("```json") && responseText.IndexOf("```", responseText.IndexOf("```json") + 7) != -1)
+        // Parse ALL AI JSON Commands (loop through every ```json block)
+        var searchFrom = 0;
+        while (true)
         {
-            var startIndex = responseText.IndexOf("```json") + 7;
-            var endIndex = responseText.IndexOf("```", startIndex);
-            if (endIndex > startIndex)
+            var jsonStart = responseText.IndexOf("```json", searchFrom);
+            if (jsonStart == -1) break;
+
+            var contentStart = jsonStart + 7;
+            var jsonEnd = responseText.IndexOf("```", contentStart);
+            if (jsonEnd == -1) break;
+
+            var jsonStr = responseText.Substring(contentStart, jsonEnd - contentStart).Trim();
+            try
             {
-                var jsonStr = responseText.Substring(startIndex, endIndex - startIndex).Trim();
-                try
+                using var doc = System.Text.Json.JsonDocument.Parse(jsonStr);
+                var root = doc.RootElement;
+                if (root.TryGetProperty("command", out var cmdProp))
                 {
-                    using var doc = System.Text.Json.JsonDocument.Parse(jsonStr);
-                    var root = doc.RootElement;
-                    if (root.TryGetProperty("command", out var cmdProp))
+                    var cmd = cmdProp.GetString();
+                    if (cmd == "add_task")
                     {
-                        var cmd = cmdProp.GetString();
-                        if (cmd == "add_task")
+                        var title = root.GetProperty("title").GetString();
+                        var dateStr = root.GetProperty("date").GetString();
+                        var duration = root.TryGetProperty("durationHours", out var durProp) ? durProp.GetDouble() : 1.0;
+                        var priorityStr = root.TryGetProperty("priority", out var prioProp) ? prioProp.GetString() : "Medium";
+
+                        if (DateTime.TryParse(dateStr, out var date))
                         {
-                            var title = root.GetProperty("title").GetString();
-                            var dateStr = root.GetProperty("date").GetString();
-                            var duration = root.TryGetProperty("durationHours", out var durProp) ? durProp.GetDouble() : 1.0;
-                            var priorityStr = root.TryGetProperty("priority", out var prioProp) ? prioProp.GetString() : "Medium";
-                            
-                            if (DateTime.TryParse(dateStr, out var date))
+                            var task = new TaskItem
                             {
-                                var task = new TaskItem
-                                {
-                                    Id = Guid.NewGuid().ToString(),
-                                    Title = title ?? "Yeni Görev",
-                                    Description = "🤖 AI Plan: Chat üzerinden eklendi.",
-                                    DueDate = date,
-                                    DurationHours = duration,
-                                    Priority = Enum.TryParse<TaskPriority>(priorityStr, out var p) ? p : TaskPriority.Medium,
-                                    Category = TaskCategory.Study
-                                };
-                                await _dataService.AddTaskAsync(task);
-                                actionPerformed = "task_added";
-                            }
+                                Id = Guid.NewGuid().ToString(),
+                                Title = title ?? "Yeni Görev",
+                                Description = "🤖 AI Plan: Chat üzerinden eklendi.",
+                                DueDate = date,
+                                DurationHours = duration,
+                                Priority = Enum.TryParse<TaskPriority>(priorityStr, out var p) ? p : TaskPriority.Medium,
+                                Category = TaskCategory.Study
+                            };
+                            await _dataService.AddTaskAsync(task);
+                            actionPerformed = "task_added";
                         }
-                        else if (cmd == "remove_task")
+                    }
+                    else if (cmd == "remove_task")
+                    {
+                        var title = root.GetProperty("title").GetString()?.ToLower();
+                        if (!string.IsNullOrEmpty(title))
                         {
-                            var title = root.GetProperty("title").GetString()?.ToLower();
-                            if (!string.IsNullOrEmpty(title))
+                            var allTasks = await _dataService.GetTasksAsync();
+                            var taskToDelete = allTasks.FirstOrDefault(t => t.Title.ToLower() == title);
+                            if (taskToDelete != null)
                             {
-                                var allTasks = await _dataService.GetTasksAsync();
-                                var taskToDelete = allTasks.FirstOrDefault(t => t.Title.ToLower() == title);
-                                if (taskToDelete != null)
-                                {
-                                    await _dataService.DeleteTaskAsync(taskToDelete.Id);
-                                    actionPerformed = "task_removed";
-                                }
+                                await _dataService.DeleteTaskAsync(taskToDelete.Id);
+                                actionPerformed = "task_removed";
                             }
                         }
                     }
                 }
-                catch (Exception ex)
-                {
-                    Console.WriteLine("JSON Command Parse Error: " + ex.Message);
-                }
-                
-                // Hide JSON block from the user UI
-                var fullJsonBlock = responseText.Substring(responseText.IndexOf("```json"), (endIndex + 3) - responseText.IndexOf("```json"));
-                responseText = responseText.Replace(fullJsonBlock, "").Trim();
             }
+            catch (Exception ex)
+            {
+                Console.WriteLine("JSON Command Parse Error: " + ex.Message);
+            }
+
+            // Remove this json block from response text, then continue from same position
+            var fullBlock = responseText.Substring(jsonStart, (jsonEnd + 3) - jsonStart);
+            responseText = responseText.Remove(jsonStart, fullBlock.Length).Trim();
+            // Don't advance searchFrom since we removed text at jsonStart
         }
 
         // Save assistant response to DB

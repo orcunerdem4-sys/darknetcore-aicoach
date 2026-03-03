@@ -112,10 +112,13 @@ Example JSON: {{ ""topic"": ""Biology"", ""complexityScore"": 7, ""wordCount"": 
         sb.AppendLine("Kullanıcı dosyalarını sorarsa yukarıdaki listeden cevap ver — asla 'göremiyorum' veya 'bilmiyorum' deme.");
         sb.AppendLine();
         sb.AppendLine("🛠️ GÖREV VE TAKVİM KOMUTLARI:");
-        sb.AppendLine("Eğer kullanıcı senden takvimine/programına yeni bir görev EKLENMESİNİ veya SİLİNMESİNİ açıkça isterse, yanıtının \nEN SONUNA aşağıdaki gibi bir JSON bloğu koy (mutlaka ```json ve ``` arasında):");
-        sb.AppendLine("Ekleme için: ```json\n{ \"command\": \"add_task\", \"title\": \"Anatomi Çalışması\", \"date\": \"2026-03-03T14:00:00\", \"durationHours\": 2.0, \"priority\": \"High\" }\n```");
-        sb.AppendLine("Silme için: ```json\n{ \"command\": \"remove_task\", \"title\": \"Anatomi Çalışması\" }\n```");
-        sb.AppendLine("Bu JSON'ı sadece aksiyon gerektiğinde kullan. Bu JSON'u koyarsan sistem arka planda görevi ekler/siler. Ayrıca kullanıcıya \"Görev takvimine eklendi\" gibi doğal dilde bir onay cümlesi de yaz.");
+        sb.AppendLine("Eğer kullanıcı takvimine görev EKLENMESİNİ isterse:");
+        sb.AppendLine("- Her görev için AYRI bir ```json bloğu yaz (tek blokta birden fazla görev OLMAZ)");
+        sb.AppendLine("- Birden fazla ders varsa her biri için ayrı blok yaz");
+        sb.AppendLine("- Ekleme: ```json\n{ \"command\": \"add_task\", \"title\": \"Ders Adı\", \"date\": \"2026-03-03T09:00:00\", \"durationHours\": 1.0, \"priority\": \"Medium\" }\n```");
+        sb.AppendLine("- Silme: ```json\n{ \"command\": \"remove_task\", \"title\": \"Ders Adı\" }\n```");
+        sb.AppendLine("⚠️ YANIT KURALLARI: JSON bloklarını ekledikten sonra kullanıcıya SADECE 1-2 kısa cümle yaz. Uzun liste veya tekrar yazma.");
+        sb.AppendLine("Örnek iyi yanıt: 'Yarınki 6 dersin takvimine eklendi ✅'");
 
         var systemPrompt = sb.ToString();
 

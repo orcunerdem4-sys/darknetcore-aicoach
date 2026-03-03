@@ -1,57 +1,154 @@
 @{
-    ViewData["Title"] = "Login - Dopamind";
+    ViewData["Title"] = "Giriş Yap - Dopamind";
     Layout = "_Layout";
 }
 
-<div class="container py-5 d-flex justify-content-center align-items-center min-vh-100">
-    <div class="card glass-panel p-5 shadow-lg" style="max-width: 400px; width: 100%;">
-        <div class="text-center mb-4">
-            <h2 class="fw-bold text-gradient">Welcome Back</h2>
-            <p class="text-light">Sign in to access your study space</p>
+<style>
+    body { background: linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 100%); }
+    .login-wrapper {
+        min-height: calc(100vh - 140px);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 2rem 1rem;
+    }
+    .login-card {
+        background: #ffffff;
+        border-radius: 24px;
+        box-shadow: 0 20px 60px rgba(5, 150, 105, 0.12), 0 4px 20px rgba(0,0,0,0.06);
+        padding: 2.5rem;
+        width: 100%;
+        max-width: 420px;
+        border: 1px solid #d1fae5;
+    }
+    .login-logo {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        margin-bottom: 1.5rem;
+    }
+    .login-logo-icon {
+        width: 48px; height: 48px;
+        background: linear-gradient(135deg, #059669, #34d399);
+        border-radius: 14px;
+        display: flex; align-items: center; justify-content: center;
+        color: white;
+    }
+    .login-title { font-size: 1.6rem; font-weight: 700; color: #064e3b; text-align: center; }
+    .login-sub { color: #6b7280; font-size: 0.92rem; text-align: center; margin-bottom: 1.8rem; }
+    .form-label { font-weight: 600; color: #374151; font-size: 0.9rem; }
+    .form-control {
+        border: 1.5px solid #e5e7eb;
+        border-radius: 12px;
+        padding: 0.75rem 1rem;
+        font-size: 0.95rem;
+        transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    .form-control:focus {
+        border-color: #059669;
+        box-shadow: 0 0 0 3px rgba(5,150,105,0.12);
+    }
+    .btn-login {
+        background: linear-gradient(135deg, #059669, #10b981);
+        color: white;
+        border: none;
+        border-radius: 12px;
+        padding: 0.8rem;
+        font-weight: 600;
+        font-size: 1rem;
+        width: 100%;
+        transition: all 0.2s;
+        box-shadow: 0 4px 12px rgba(5,150,105,0.3);
+    }
+    .btn-login:hover { transform: translateY(-1px); box-shadow: 0 6px 18px rgba(5,150,105,0.4); color: white; }
+    .divider { display: flex; align-items: center; gap: 12px; margin: 1.2rem 0; }
+    .divider-line { flex: 1; height: 1px; background: #e5e7eb; }
+    .divider-text { color: #9ca3af; font-size: 0.82rem; white-space: nowrap; }
+    .btn-social {
+        display: flex; align-items: center; justify-content: center; gap: 10px;
+        width: 100%; padding: 0.75rem;
+        border-radius: 12px; border: 1.5px solid #e5e7eb;
+        background: #fff; color: #374151;
+        font-weight: 500; font-size: 0.92rem;
+        transition: all 0.2s; cursor: pointer;
+        margin-bottom: 0.75rem;
+        text-decoration: none;
+    }
+    .btn-social:hover { border-color: #d1d5db; background: #f9fafb; color: #111827; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+    .btn-social svg { width: 20px; height: 20px; flex-shrink: 0; }
+    .signup-link { text-align: center; margin-top: 1.5rem; color: #6b7280; font-size: 0.9rem; }
+    .signup-link a { color: #059669; font-weight: 600; text-decoration: none; }
+    .signup-link a:hover { text-decoration: underline; }
+    .remember-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.2rem; }
+    .remember-row label { font-size: 0.88rem; color: #6b7280; cursor: pointer; }
+</style>
+
+<div class="login-wrapper">
+    <div class="login-card">
+        <div class="login-logo">
+            <div class="login-logo-icon">
+                <i data-lucide="brain" style="width:26px;height:26px;"></i>
+            </div>
+            <span style="font-size:1.5rem;font-weight:800;color:#059669;">Dopamind</span>
         </div>
+        <h1 class="login-title">Hoş Geldin 👋</h1>
+        <p class="login-sub">Çalışma alanına giriş yap</p>
 
         @if (!string.IsNullOrEmpty(ViewBag.Error))
         {
-            <div class="alert alert-danger" role="alert">
-                @ViewBag.Error
+            <div class="alert alert-danger rounded-3 py-2 px-3 mb-3" style="font-size:0.9rem;" role="alert">
+                <i data-lucide="alert-circle" style="width:16px;height:16px;margin-right:6px;"></i>@ViewBag.Error
             </div>
         }
 
         <form asp-controller="Account" asp-action="Login" method="post">
             <div class="mb-3">
-                <label for="username" class="form-label text-light">Username</label>
-                <input type="text" class="form-control bg-dark text-light border-secondary" id="username" name="username" required>
+                <label for="username" class="form-label">Kullanıcı Adı</label>
+                <input type="text" class="form-control" id="username" name="username"
+                       placeholder="kullanici_adi" required autocomplete="username">
             </div>
-            
-            <div class="mb-4">
-                <label for="password" class="form-label text-light">Password</label>
-                <input type="password" class="form-control bg-dark text-light border-secondary" id="password" name="password" required>
+            <div class="mb-3">
+                <label for="password" class="form-label">Şifre</label>
+                <input type="password" class="form-control" id="password" name="password"
+                       placeholder="••••••••" required autocomplete="current-password">
             </div>
-            
-            <button type="submit" class="btn btn-primary w-100 glow-effect rounded-pill py-2 fw-bold">Login</button>
+            <div class="remember-row">
+                <div class="form-check mb-0">
+                    <input class="form-check-input" type="checkbox" id="rememberMe" checked>
+                    <label class="form-check-label" for="rememberMe">Beni hatırla</label>
+                </div>
+            </div>
+            <button type="submit" class="btn-login">Giriş Yap</button>
         </form>
 
-        <div class="text-center mt-4">
-            <p class="text-light mb-0">Don't have an account? <br>
-                <a asp-action="Register" class="text-primary fw-bold text-decoration-none">Sign up for free</a>
-            </p>
+        <div class="divider">
+            <div class="divider-line"></div>
+            <span class="divider-text">veya şununla devam et</span>
+            <div class="divider-line"></div>
+        </div>
+
+        <!-- Google Sign-In (placeholder — credential gerekli) -->
+        <a href="#" class="btn-social" title="Yakında aktif edilecek">
+            <svg viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+                <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
+                <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
+                <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
+                <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
+            </svg>
+            Google ile Giriş Yap
+        </a>
+
+        <!-- Apple Sign-In (placeholder — credential gerekli) -->
+        <a href="#" class="btn-social" title="Yakında aktif edilecek">
+            <svg viewBox="0 0 814 1000" xmlns="http://www.w3.org/2000/svg">
+                <path d="M788.1 340.9c-5.8 4.5-108.2 62.2-108.2 190.5 0 148.4 130.3 200.9 134.2 202.2-.6 3.2-20.7 71.9-68.7 141.9-42.8 61.6-87.5 123.1-155.5 123.1s-85.5-39.5-164-39.5c-76 0-103.7 40.8-165.9 40.8s-105-37.5-155.5-103.4c-43.3-58.1-81-147.3-81-232 0-170.7 111.4-261.1 221-261.1 69.4 0 126.9 45.4 170.5 45.4 42.8 0 109.7-47.9 190.5-47.9zm-134.2-132.3c33.3-40.5 56.7-95.6 56.7-150.7 0-7.7-.6-15.4-1.9-21.8-53.2 2-116.5 35.5-154.5 81.4-30.7 35.5-60 90.6-60 146.4 0 8.3 1.3 16.6 1.9 19.2 3.2.6 8.4 1.3 13.6 1.3 48.1 0 108.2-32.1 144.2-75.8z"/>
+            </svg>
+            Apple ile Giriş Yap
+        </a>
+
+        <div class="signup-link">
+            Hesabın yok mu? <a asp-action="Register">Ücretsiz kayıt ol</a>
         </div>
     </div>
 </div>
-
-<style>
-    .text-gradient {
-        background: linear-gradient(135deg, #fff 0%, #a855f7 100%);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-    }
-    
-    .glow-effect {
-        box-shadow: 0 0 15px rgba(124, 58, 237, 0.4);
-        transition: box-shadow 0.3s ease;
-    }
-    
-    .glow-effect:hover {
-        box-shadow: 0 0 25px rgba(124, 58, 237, 0.8);
-    }
-</style>
