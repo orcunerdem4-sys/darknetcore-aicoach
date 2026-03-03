@@ -61,19 +61,43 @@ document.addEventListener('DOMContentLoaded', function () {
                 list.innerHTML = '';
                 tasks.forEach(task => {
                     const item = document.createElement('a');
-                    item.className = 'list-group-item list-group-item-action bg-transparent text-light border-secondary d-flex justify-content-between align-items-center';
+                    item.className = 'list-group-item list-group-item-action bg-transparent border-secondary d-flex justify-content-between align-items-center mb-1 rounded';
+                    
+                    // Priority Badge
+                    const badgeClass = getPriorityBadge(task.priority);
+                    const badgeLabel = getPriorityLabel(task.priority);
+                    
+                    // Difficulty Tooltip
+                    const difficultyScore = task.difficultyScore || 3;
+                    const difficultyReason = task.difficultyReason || "Standart görev.";
+                    
                     item.innerHTML = `
-                        <div>
-                            <h6 class="mb-0">${task.title}</h6>
-                            <small class="text-light opacity-50" style="font-size: 0.75rem;">
-                                <i data-lucide="clock" size="12" class="me-1"></i>${formatRelativeTime(task.dueDate)}
+                        <div class="pe-2">
+                            <h6 class="mb-1 text-dark fw-bold" style="font-size: 0.95rem;">${task.title}</h6>
+                            <small class="text-secondary d-flex align-items-center" style="font-size: 0.8rem;">
+                                <i data-lucide="clock" size="14" class="me-1"></i>${formatRelativeTime(task.dueDate)}
                             </small>
                         </div>
-                        <span class="badge ${getPriorityBadge(task.priority)}">${getPriorityLabel(task.priority)}</span>
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="badge ${badgeClass}" style="min-width: 60px;">${badgeLabel}</span>
+                            <button type="button" class="btn btn-sm btn-light rounded-circle p-1" 
+                                    data-bs-toggle="tooltip" 
+                                    data-bs-placement="top" 
+                                    data-bs-custom-class="custom-tooltip"
+                                    title="Zorluk ${difficultyScore}/10: ${difficultyReason}">
+                                <i data-lucide="info" size="16" class="text-primary"></i>
+                            </button>
+                        </div>
                     `;
                     list.appendChild(item);
                 });
                 lucide.createIcons();
+                
+                // Initialize tooltips
+                var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+                var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+                  return new bootstrap.Tooltip(tooltipTriggerEl);
+                });
             });
     }
 

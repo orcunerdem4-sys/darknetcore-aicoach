@@ -19,6 +19,10 @@ public class TaskItem
     public TaskCategory Category { get; set; } = TaskCategory.Work;
     public bool IsCompleted { get; set; } = false;
     public double DurationHours { get; set; } = 1.0;
+    
+    // AI Difficulty & Explanation
+    public int DifficultyScore { get; set; } = 3;
+    public string DifficultyReason { get; set; } = string.Empty;
 }
 
 public enum TaskPriority

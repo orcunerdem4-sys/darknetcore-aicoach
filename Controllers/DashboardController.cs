@@ -36,7 +36,9 @@ public class DashboardController : Controller
             end = t.DueDate.AddHours(t.DurationHours).ToString("yyyy-MM-ddTHH:mm:ss"), // Proper End Time
             allDay = false,
             color = t.Priority == TaskPriority.High ? "#dc3545" : t.Priority == TaskPriority.Medium ? "#ffc107" : "#198754",
-            textColor = t.Priority == TaskPriority.Medium ? "#000" : "#fff"
+            textColor = t.Priority == TaskPriority.Medium ? "#000" : "#fff",
+            difficultyScore = t.DifficultyScore,
+            difficultyReason = string.IsNullOrEmpty(t.DifficultyReason) ? "Planlanmış standart görev." : t.DifficultyReason
         });
         return Json(tasks);
     }
@@ -610,6 +612,8 @@ public class DashboardController : Controller
                         var dateStr = root.GetProperty("date").GetString();
                         var duration = root.TryGetProperty("durationHours", out var durProp) ? durProp.GetDouble() : 1.0;
                         var priorityStr = root.TryGetProperty("priority", out var prioProp) ? prioProp.GetString() : "Medium";
+                        var diffScore = root.TryGetProperty("difficultyScore", out var dsProp) ? dsProp.GetInt32() : 3;
+                        var diffReason = root.TryGetProperty("difficultyReason", out var drProp) ? drProp.GetString() : "";
 
                         if (DateTime.TryParse(dateStr, out var date))
                         {
@@ -621,7 +625,9 @@ public class DashboardController : Controller
                                 DueDate = date,
                                 DurationHours = duration,
                                 Priority = Enum.TryParse<TaskPriority>(priorityStr, out var p) ? p : TaskPriority.Medium,
-                                Category = TaskCategory.Study
+                                Category = TaskCategory.Study,
+                                DifficultyScore = diffScore,
+                                DifficultyReason = diffReason ?? ""
                             };
                             await _dataService.AddTaskAsync(task);
                             actionPerformed = "task_added";

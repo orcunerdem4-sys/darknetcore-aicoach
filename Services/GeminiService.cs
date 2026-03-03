@@ -115,7 +115,9 @@ Example JSON: {{ ""topic"": ""Biology"", ""complexityScore"": 7, ""wordCount"": 
         sb.AppendLine("Eğer kullanıcı takvimine görev EKLENMESİNİ isterse:");
         sb.AppendLine("- Her görev için AYRI bir ```json bloğu yaz (tek blokta birden fazla görev OLMAZ)");
         sb.AppendLine("- Birden fazla ders varsa her biri için ayrı blok yaz");
-        sb.AppendLine("- Ekleme: ```json\n{ \"command\": \"add_task\", \"title\": \"Ders Adı\", \"date\": \"2026-03-03T09:00:00\", \"durationHours\": 1.0, \"priority\": \"Medium\" }\n```");
+        sb.AppendLine("- Ekleme: ```json\n{ \"command\": \"add_task\", \"title\": \"Ders Adı\", \"date\": \"2026-03-03T09:00:00\", \"durationHours\": 1.0, \"priority\": \"Medium\", \"difficultyScore\": 6, \"difficultyReason\": \"Anatomi ezberi yoğun olduğu için bölünmeden 2 saat çalışılmalı.\" }\n```");
+        sb.AppendLine("- difficultyScore: Dersin/ödevin analizine göre 1-10 arası bir zorluk - yoğunluk derecesi ver.");
+        sb.AppendLine("- difficultyReason: 1-2 cümleyle dersin/ödevin içeriğine göre neden bu zorlukta olduğunu, hangi konuların yorabileceğini açıkla (kullanıcı bunu bilgi baloncuğunda okuyacak).");
         sb.AppendLine("- Silme: ```json\n{ \"command\": \"remove_task\", \"title\": \"Ders Adı\" }\n```");
         sb.AppendLine("⚠️ YANIT KURALLARI: JSON bloklarını ekledikten sonra kullanıcıya SADECE 1-2 kısa cümle yaz. Uzun liste veya tekrar yazma.");
         sb.AppendLine("Örnek iyi yanıt: 'Yarınki 6 dersin takvimine eklendi ✅'");
