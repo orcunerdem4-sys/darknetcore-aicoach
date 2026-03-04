@@ -91,6 +91,7 @@ public class DashboardController : Controller
     }
 
     [HttpPost]
+    [IgnoreAntiforgeryToken]
     public async Task<IActionResult> SaveFeedback([FromBody] FeedbackSaveRequest request)
     {
         if (string.IsNullOrWhiteSpace(request?.Content))
@@ -100,6 +101,7 @@ public class DashboardController : Controller
     }
 
     [HttpGet]
+    [IgnoreAntiforgeryToken]
     public async Task<IActionResult> GetFeedbacks()
     {
         var notes = await _dataService.GetFeedbacksAsync();

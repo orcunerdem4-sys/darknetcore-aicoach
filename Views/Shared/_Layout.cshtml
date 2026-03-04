@@ -146,6 +146,29 @@
         </div>
     </div>
 
+    <!-- iOS PWA Install Banner -->
+    <div id="iosPwaBanner" style="display:none; position:fixed; bottom:0; left:0; right:0; z-index:9999;
+        background:linear-gradient(135deg,#059669,#10b981); color:white; padding:14px 20px;
+        box-shadow:0 -4px 20px rgba(0,0,0,0.15); align-items:center; gap:12px; font-size:0.9rem;">
+        <i data-lucide="smartphone" style="width:22px;height:22px;flex-shrink:0;"></i>
+        <div style="flex:1;">
+            <strong>Ana Ekrana Ekle</strong><br>
+            <span style="opacity:0.9;font-size:0.82rem;">Safari'de <strong>Paylaş (&#8607;)</strong> butonuna dokun → <strong>Ana Ekrana Ekle</strong>'yi seç.</span>
+        </div>
+        <button onclick="document.getElementById('iosPwaBanner').style.display='none'; localStorage.setItem('iosBannerShown','1');"
+                style="background:rgba(255,255,255,0.2);border:1px solid rgba(255,255,255,0.4);color:white;border-radius:20px;padding:4px 14px;cursor:pointer;font-size:0.85rem;">Tamam</button>
+    </div>
+
+    <!-- PWA Install Button (shown when installable on Chrome/Edge/Android) -->
+    <button id="pwaInstallBtn" style="display:none; position:fixed; bottom:30px; right:30px; z-index:1060;
+        background:linear-gradient(135deg,#059669,#10b981); color:white; border:none;
+        border-radius:25px; padding:0 20px; height:50px; box-shadow:0 4px 20px rgba(5,150,105,0.4);
+        font-weight:600; font-size:0.92rem; cursor:pointer; align-items:center; gap:8px;
+        transition:transform 0.2s, box-shadow 0.2s;" aria-label="Uygulamayı yükle">
+        <i data-lucide="download" style="width:18px;height:18px;"></i>
+        <span>Uygulamayı Yükle</span>
+    </button>
+
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     <script src="~/js/site.js" asp-append-version="true"></script>
@@ -229,14 +252,51 @@
     </script>
     @await RenderSectionAsync("Scripts", required: false)
     
-    <!-- PWA Service Worker Registration -->
+    <!-- PWA Service Worker + Install Prompt -->
     <script>
+        // ── Service Worker ──
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
                 navigator.serviceWorker.register('/service-worker.js')
-                    .then(registration => console.log('SW registered'))
-                    .catch(error => console.error('SW error', error));
+                    .then(r => console.log('SW registered'))
+                    .catch(e => console.error('SW error', e));
             });
+        }
+
+        // ── Android / Chrome / Edge Install Prompt ──
+        let deferredPrompt;
+        const pwaBtn = document.getElementById('pwaInstallBtn');
+
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            if (pwaBtn) {
+                pwaBtn.style.display = 'flex';
+                pwaBtn.addEventListener('mouseenter', () => { pwaBtn.style.transform = 'translateY(-2px)'; pwaBtn.style.boxShadow = '0 8px 24px rgba(5,150,105,0.5)'; });
+                pwaBtn.addEventListener('mouseleave', () => { pwaBtn.style.transform = ''; pwaBtn.style.boxShadow = '0 4px 20px rgba(5,150,105,0.4)'; });
+            }
+        });
+
+        if (pwaBtn) {
+            pwaBtn.addEventListener('click', async () => {
+                if (!deferredPrompt) return;
+                deferredPrompt.prompt();
+                const { outcome } = await deferredPrompt.userChoice;
+                deferredPrompt = null;
+                pwaBtn.style.display = 'none';
+            });
+        }
+
+        window.addEventListener('appinstalled', () => {
+            if (pwaBtn) pwaBtn.style.display = 'none';
+        });
+
+        // ── iOS Safari Banner ──
+        const isIos = /iphone|ipad|ipod/i.test(navigator.userAgent);
+        const isInStandaloneMode = window.navigator.standalone === true;
+        const iosBanner = document.getElementById('iosPwaBanner');
+        if (isIos && !isInStandaloneMode && !localStorage.getItem('iosBannerShown') && iosBanner) {
+            setTimeout(() => { iosBanner.style.display = 'flex'; lucide.createIcons(); }, 3000);
         }
     </script>
 </body>
