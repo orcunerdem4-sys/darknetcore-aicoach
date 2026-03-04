@@ -13,6 +13,9 @@ document.addEventListener('DOMContentLoaded', function () {
         droppable: true,
         selectable: true,
         selectMirror: true,
+        expandRows: true,
+        height: 'auto',
+        contentHeight: 600,
         // Boş bir yere (veya gün aralığına) tıklandğında
         select: function (info) {
             // "Zamanı" (info.startStr) taskDate inputuna doldur ve modal'ı manuel göster
@@ -74,9 +77,34 @@ document.addEventListener('DOMContentLoaded', function () {
                 btn.remove();
             }
         },
-        // Göreve tıklanınca detay (Edit yapılabilir ama şimdilik alert)
+        // Göreve tıklanınca detay popup göster
         eventClick: function (info) {
-            alert('Görev: ' + info.event.title);
+            const event = info.event;
+            const isCompleted = event.extendedProps.isCompleted;
+
+            // Populate the modal
+            document.getElementById('taskDetailTitle').textContent = event.title;
+            document.getElementById('taskDetailDate').textContent = event.startStr ? new Date(event.startStr).toLocaleString('tr-TR') : '';
+            document.getElementById('taskDetailStatus').textContent = isCompleted ? '✅ Tamamlandı' : '⏳ Bekliyor';
+
+            const completeBtn = document.getElementById('taskDetailCompleteBtn');
+            completeBtn.textContent = isCompleted ? 'Tamamlanmadı İşaretle' : '✅ Tamamlandı İşaretle';
+            completeBtn.onclick = function () {
+                window.toggleTaskComplete(event.id, !isCompleted);
+            };
+
+            const deleteBtn = document.getElementById('taskDetailDeleteBtn');
+            deleteBtn.onclick = function () {
+                if (confirm(`'${event.title}' silinsin mi?`)) {
+                    fetch('/Dashboard/DeleteTask/' + event.id, { method: 'POST' })
+                        .then(r => { if (r.ok) { calendar.refetchEvents(); loadTaskList(); } });
+                    var modal = bootstrap.Modal.getInstance(document.getElementById('taskDetailModal'));
+                    if (modal) modal.hide();
+                }
+            };
+
+            var myModal = new bootstrap.Modal(document.getElementById('taskDetailModal'));
+            myModal.show();
         }
     });
     calendar.render();
@@ -141,21 +169,24 @@ document.addEventListener('DOMContentLoaded', function () {
                     const difficultyReason = task.difficultyReason || "Standart görev.";
 
                     item.innerHTML = `
-                        <div class="pe-2">
-                            <h6 class="mb-1 text-dark fw-bold" style="font-size: 0.95rem;">${task.title}</h6>
-                            <small class="text-secondary d-flex align-items-center" style="font-size: 0.8rem;">
-                                <i data-lucide="clock" size="14" class="me-1"></i>${formatRelativeTime(task.dueDate)}
-                            </small>
-                        </div>
-                        <div class="d-flex align-items-center gap-2">
-                            <span class="badge ${badgeClass}" style="min-width: 60px;">${badgeLabel}</span>
-                            <button type="button" class="btn btn-sm btn-light rounded-circle p-1" 
-                                    data-bs-toggle="tooltip" 
-                                    data-bs-placement="top" 
-                                    data-bs-custom-class="custom-tooltip"
-                                    title="Zorluk ${difficultyScore}/10: ${difficultyReason}">
-                                <i data-lucide="info" size="16" class="text-primary"></i>
-                            </button>
+                        <div class="d-flex align-items-center gap-2 pe-2 w-100">
+                            <input class="form-check-input mb-0" type="checkbox" ${task.isCompleted ? 'checked' : ''} onchange="toggleTaskComplete('${task.id}', this.checked)" style="width:1.2rem; height:1.2rem; cursor:pointer;" title="Görevi Tamamla">
+                            <div class="flex-grow-1" style="${task.isCompleted ? 'text-decoration: line-through; opacity: 0.7;' : ''}">
+                                <h6 class="mb-0 text-dark fw-bold" style="font-size: 0.95rem;">${task.title}</h6>
+                                <small class="text-secondary d-flex align-items-center mt-1" style="font-size: 0.8rem;">
+                                    <i data-lucide="clock" size="14" class="me-1"></i>${formatRelativeTime(task.dueDate)}
+                                </small>
+                            </div>
+                            <div class="d-flex flex-column align-items-end gap-1">
+                                <span class="badge ${badgeClass}" style="min-width: 60px;">Zorluk: ${badgeLabel}</span>
+                                <button type="button" class="btn btn-sm btn-light rounded-circle p-1" 
+                                        data-bs-toggle="tooltip" 
+                                        data-bs-placement="top" 
+                                        data-bs-custom-class="custom-tooltip"
+                                        title="Zorluk ${difficultyScore}/10: ${difficultyReason}">
+                                    <i data-lucide="info" size="16" class="text-primary"></i>
+                                </button>
+                            </div>
                         </div>
                     `;
                     list.appendChild(item);
@@ -196,9 +227,9 @@ document.addEventListener('DOMContentLoaded', function () {
 
     function getPriorityLabel(priority) {
         switch (priority) {
-            case 2: return 'High';
-            case 1: return 'Medium';
-            default: return 'Low';
+            case 2: return 'Yüksek';
+            case 1: return 'Orta';
+            default: return 'Düşük';
         }
     }
 
@@ -210,6 +241,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const chatSendBtn = document.getElementById('chatSendBtn');
     const chatMessages = document.getElementById('chatMessages');
     let activeContextIds = [];
+    let widgetSessionId = null;
 
     // Check for context from Files page
     const urlParams = new URLSearchParams(window.location.search);
@@ -261,6 +293,7 @@ document.addEventListener('DOMContentLoaded', function () {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 message: text,
+                sessionId: widgetSessionId,
                 contextFileIds: activeContextIds
             })
         })
@@ -270,6 +303,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 if (indicator) indicator.classList.add('d-none');
 
                 if (data.success) {
+                    if (data.sessionId) widgetSessionId = data.sessionId;
                     // Start with 'reply' (new backend format), fallback to 'response'
                     const finalResponse = data.reply || data.response;
                     appendMessage('AI', finalResponse);
@@ -289,3 +323,21 @@ document.addEventListener('DOMContentLoaded', function () {
             });
     }
 });
+
+// Global toggle function
+window.toggleTaskComplete = function (taskId, isCompleted) {
+    const taskData = {
+        id: taskId,
+        isCompleted: isCompleted,
+    };
+
+    fetch('/Dashboard/ToggleTaskComplete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(taskData)
+    }).then(response => {
+        if (response.ok) {
+            window.location.reload(); // Reload to see streak updates
+        }
+    });
+};

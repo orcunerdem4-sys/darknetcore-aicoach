@@ -3,6 +3,7 @@ using System;
 using DarkNetCore.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace DarkNetCore.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260304142055_AddUserIdToFeedbackNote")]
+    partial class AddUserIdToFeedbackNote
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -118,60 +121,6 @@ namespace DarkNetCore.Migrations
                     b.HasIndex("UserId");
 
                     b.ToTable("Lessons");
-                });
-
-            modelBuilder.Entity("DarkNetCore.Models.SleepRecord", b =>
-                {
-                    b.Property<string>("Id")
-                        .HasColumnType("text");
-
-                    b.Property<string>("Notes")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<int>("QualityScore")
-                        .HasColumnType("integer");
-
-                    b.Property<DateTime>("SleepEnd")
-                        .HasColumnType("timestamp without time zone");
-
-                    b.Property<DateTime>("SleepStart")
-                        .HasColumnType("timestamp without time zone");
-
-                    b.Property<string>("UserId")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("UserId");
-
-                    b.ToTable("SleepRecords");
-                });
-
-            modelBuilder.Entity("DarkNetCore.Models.StreakRecord", b =>
-                {
-                    b.Property<string>("Id")
-                        .HasColumnType("text");
-
-                    b.Property<int>("CurrentStreak")
-                        .HasColumnType("integer");
-
-                    b.Property<DateTime>("LastCompletedDate")
-                        .HasColumnType("timestamp without time zone");
-
-                    b.Property<int>("LongestStreak")
-                        .HasColumnType("integer");
-
-                    b.Property<string>("UserId")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("UserId");
-
-                    b.ToTable("StreakRecords");
                 });
 
             modelBuilder.Entity("DarkNetCore.Models.TaskItem", b =>
@@ -340,28 +289,6 @@ namespace DarkNetCore.Migrations
                 {
                     b.HasOne("DarkNetCore.Models.User", "User")
                         .WithMany("Lessons")
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("User");
-                });
-
-            modelBuilder.Entity("DarkNetCore.Models.SleepRecord", b =>
-                {
-                    b.HasOne("DarkNetCore.Models.User", "User")
-                        .WithMany()
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("User");
-                });
-
-            modelBuilder.Entity("DarkNetCore.Models.StreakRecord", b =>
-                {
-                    b.HasOne("DarkNetCore.Models.User", "User")
-                        .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();

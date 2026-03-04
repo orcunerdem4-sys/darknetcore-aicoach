@@ -17,6 +17,8 @@ public class ApplicationDbContext : DbContext
     public DbSet<ChatSession> ChatSessions { get; set; }
     public DbSet<ChatMessage> ChatMessages { get; set; }
     public DbSet<FeedbackNote> FeedbackNotes { get; set; }
+    public DbSet<SleepRecord> SleepRecords { get; set; }
+    public DbSet<StreakRecord> StreakRecords { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

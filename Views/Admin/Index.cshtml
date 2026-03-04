@@ -1,0 +1,96 @@
+@{
+    ViewData["Title"] = "Geliştirici Paneli";
+    var users = ViewBag.Users as List<DarkNetCore.Models.User>;
+    var feedbacks = ViewBag.Feedbacks as List<DarkNetCore.Models.FeedbackNote>;
+}
+
+<div class="container-fluid p-4">
+    <div class="d-flex align-items-center mb-4">
+        <i data-lucide="shield" class="text-warning me-3" size="32"></i>
+        <h2 class="mb-0 text-dark fw-bold">Geliştirici Yönetim Paneli</h2>
+    </div>
+
+    <div class="accordion shadow-sm" id="adminAccordion">
+      
+      <!-- Users Category -->
+      <div class="accordion-item glass-panel mb-3 border-0 overflow-hidden rounded">
+        <h2 class="accordion-header" id="headingUsers">
+          <button class="accordion-button collapsed bg-transparent text-primary fw-bold" type="button" data-bs-toggle="collapse" data-bs-target="#collapseUsers" aria-expanded="false" aria-controls="collapseUsers">
+            <i data-lucide="users" class="me-2"></i> Kayıtlı Olanlar
+          </button>
+        </h2>
+        <div id="collapseUsers" class="accordion-collapse collapse" aria-labelledby="headingUsers" data-bs-parent="#adminAccordion">
+          <div class="accordion-body p-0">
+                <div class="table-responsive m-3 rounded">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Kullanıcı Adı</th>
+                                <th>Email</th>
+                                <th>Kayıt Tarihi</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @if (users != null && users.Any())
+                            {
+                                foreach (var user in users)
+                                {
+                                    <tr>
+                                        <td class="fw-bold">@user.Username</td>
+                                        <td class="text-secondary small">@user.Email</td>
+                                        <td class="small">@user.CreatedAt.ToString("dd MMM yyyy")</td>
+                                    </tr>
+                                }
+                            }
+                            else
+                            {
+                                <tr><td colspan="3" class="text-center text-muted">Kullanıcı bulunamadı.</td></tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Feedbacks Category -->
+      <div class="accordion-item glass-panel mb-3 border-0 overflow-hidden rounded">
+        <h2 class="accordion-header" id="headingFeedbacks">
+          <button class="accordion-button collapsed bg-transparent text-success fw-bold" type="button" data-bs-toggle="collapse" data-bs-target="#collapseFeedbacks" aria-expanded="false" aria-controls="collapseFeedbacks">
+            <i data-lucide="message-square" class="me-2"></i> Sistem Geri Bildirimleri
+          </button>
+        </h2>
+        <div id="collapseFeedbacks" class="accordion-collapse collapse" aria-labelledby="headingFeedbacks" data-bs-parent="#adminAccordion">
+          <div class="accordion-body">
+                <div class="list-group list-group-flush" style="max-height: 500px; overflow-y: auto;">
+                    @if (feedbacks != null && feedbacks.Any())
+                    {
+                        foreach (var f in feedbacks)
+                        {
+                            var writer = users?.FirstOrDefault(u => u.Id == f.UserId)?.Username ?? "Bilinmeyen";
+                            <div class="list-group-item bg-transparent border-bottom border-light mb-2 p-3 rounded" style="background: rgba(255,255,255,0.5) !important;">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <span class="badge bg-primary-subtle text-primary fw-bold">@@@writer</span>
+                                    <small class="text-secondary"><i data-lucide="clock" size="12" class="me-1"></i>@f.CreatedAt.ToString("dd MMM HH:mm")</small>
+                                </div>
+                                <p class="mb-0 text-dark" style="white-space: pre-wrap; font-size: 0.95rem;">@f.Content</p>
+                            </div>
+                        }
+                    }
+                    else
+                    {
+                        <div class="text-center text-muted p-4">Henüz hiç geri bildirim yok.</div>
+                    }
+                </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        lucide.createIcons();
+    </script>
+}

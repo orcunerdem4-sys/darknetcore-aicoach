@@ -21,6 +21,11 @@ public class DashboardController : Controller
     public async Task<IActionResult> Index()
     {
         var tasks = await _dataService.GetTasksAsync();
+        
+        // Pass metrics to View
+        ViewBag.Streak = await _dataService.GetOrCreateStreakAsync();
+        ViewBag.SleepRecords = await _dataService.GetRecentSleepRecordsAsync(7);
+        
         return View(tasks);
     }
 
@@ -37,6 +42,7 @@ public class DashboardController : Controller
             allDay = false,
             color = t.Priority == TaskPriority.High ? "#dc3545" : t.Priority == TaskPriority.Medium ? "#ffc107" : "#198754",
             textColor = t.Priority == TaskPriority.Medium ? "#000" : "#fff",
+            priority = (int)t.Priority,
             difficultyScore = t.DifficultyScore,
             difficultyReason = string.IsNullOrEmpty(t.DifficultyReason) ? "Planlanmış standart görev." : t.DifficultyReason
         });
@@ -63,6 +69,21 @@ public class DashboardController : Controller
     }
 
     [HttpPost]
+    public async Task<IActionResult> ToggleTaskComplete([FromBody] TaskItem taskUpdate)
+    {
+        var tasks = await _dataService.GetTasksAsync();
+        var existingTask = tasks.FirstOrDefault(t => t.Id == taskUpdate.Id);
+        
+        if (existingTask != null)
+        {
+            existingTask.IsCompleted = taskUpdate.IsCompleted;
+            await _dataService.UpdateTaskAsync(existingTask);
+            return Json(new { success = true });
+        }
+        return Json(new { success = false });
+    }
+
+    [HttpPost]
     public async Task<IActionResult> DeleteTask(string id)
     {
         await _dataService.DeleteTaskAsync(id);
@@ -83,6 +104,17 @@ public class DashboardController : Controller
     {
         var notes = await _dataService.GetFeedbacksAsync();
         return Json(notes.Select(n => new { n.Id, n.Content, n.CreatedAt }));
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> AddSleepRecord(SleepRecord record)
+    {
+        if (ModelState.IsValid)
+        {
+            await _dataService.AddSleepRecordAsync(record);
+            return RedirectToAction("Index");
+        }
+        return RedirectToAction("Index"); // Should really handle errors better, but redirecting back to dash for now
     }
 
     

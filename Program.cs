@@ -13,6 +13,7 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 builder.Services.AddScoped<DatabaseService>();
 builder.Services.AddHttpClient<DarkNetCore.Services.GeminiService>();
 builder.Services.AddSingleton<DarkNetCore.Services.JsonDataService>();
+builder.Services.AddHttpContextAccessor();
 
 // Authentication & Session
 builder.Services.AddAuthentication(Microsoft.AspNetCore.Authentication.Cookies.CookieAuthenticationDefaults.AuthenticationScheme)

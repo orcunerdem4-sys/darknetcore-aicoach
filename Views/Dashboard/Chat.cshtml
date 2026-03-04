@@ -101,17 +101,16 @@
     <!-- ── Main Chat Area ── -->
     <div class="chat-main flex-grow-1 d-flex flex-column position-relative" style="background: #ffffff; min-width:0;">
 
-        <!-- Header -->
         <div class="chat-header d-flex align-items-center px-4 py-3 bg-white border-bottom">
             <button class="btn btn-sm btn-outline-secondary d-md-none me-3" id="sidebarToggleBtn" title="Sohbetler">
                 <i data-lucide="menu" size="20"></i>
             </button>
-            <div class="ai-avatar me-3" style="width:40px;height:40px;border-radius:12px;background:#ecfdf5; display:flex;align-items:center;justify-content:center; border: 1px solid #a7f3d0">
-                <i data-lucide="bot" size="24" style="color:#059669;"></i>
+            <div class="ai-avatar me-3" style="width:40px;height:40px;border-radius:50%;background:#e0e7ff; display:flex;align-items:center;justify-content:center; border: 1px solid #c7d2fe">
+                <i data-lucide="sparkles" size="20" style="color:#4f46e5;"></i>
             </div>
             <div>
-                <h6 class="mb-0 fw-bold text-dark fs-5">Koçluk Oturumu</h6>
-                <small class="text-success fw-medium d-flex align-items-center"><span style="display:inline-block;width:8px;height:8px;background:#10b981;border-radius:50%;margin-right:6px;"></span> Aktif Bağlantı</small>
+                <h6 class="mb-0 fw-bold text-dark fs-5">Dopamind Asistan</h6>
+                <small class="text-success fw-medium d-flex align-items-center"><span style="display:inline-block;width:8px;height:8px;background:#10b981;border-radius:50%;margin-right:6px;"></span> Çevrimiçi</small>
             </div>
         </div>
 
@@ -121,16 +120,16 @@
             {
                 <div class="text-center mt-5 text-muted" id="emptyState">
                     <div class="mb-3 d-flex justify-content-center">
-                        <div style="width: 80px; height: 80px; background: #ecfdf5; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #059669;">
-                            <i data-lucide="sparkles" size="40"></i>
+                        <div style="width: 80px; height: 80px; background: #e0e7ff; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #4f46e5;">
+                            <i data-lucide="messages-square" size="40"></i>
                         </div>
                     </div>
-                    <h4 class="text-dark fw-bold mb-2">AI Koç'a Merhaba De!</h4>
-                    <p class="text-secondary mb-4" style="max-width: 400px; margin: 0 auto;">Ders planı oluşturma, dosya analizi, takvim optimizasyonu ve stratejik hedefler için buradayım.</p>
+                    <h4 class="text-dark fw-bold mb-2">Nasıl Yardımcı Olabilirim?</h4>
+                    <p class="text-secondary mb-4" style="max-width: 400px; margin: 0 auto;">Planlama, öğrenme süreçleri ve her türlü akademik konuda sorularını yanıtlamaya hazırım.</p>
                     <div class="d-flex flex-wrap gap-2 justify-content-center mt-4">
-                        <button class="btn btn-outline-success suggestion-btn rounded-pill px-4">📅 Bu haftaki planım nedir?</button>
-                        <button class="btn btn-outline-success suggestion-btn rounded-pill px-4">📚 Sınavlara nasıl hazırlanmalıyım?</button>
-                        <button class="btn btn-outline-success suggestion-btn rounded-pill px-4">⏰ Bana bir çalışma programı yap</button>
+                        <button class="btn btn-outline-primary suggestion-btn rounded-pill px-4">📅 Bugün neler var?</button>
+                        <button class="btn btn-outline-primary suggestion-btn rounded-pill px-4">📚 Sınav hazırlığı taktikleri</button>
+                        <button class="btn btn-outline-primary suggestion-btn rounded-pill px-4">⏰ Bana çalışma rutini öner</button>
                     </div>
                 </div>
             }
@@ -207,13 +206,8 @@
 
     let attachedFileIds = [];
 
-    // Scroll chat to bottom initially
     if (chatMessages) {
         chatMessages.scrollTop = chatMessages.scrollHeight;
-    }
-
-    if(newChatBtn) {
-        newChatBtn.addEventListener('click', () => { window.location.href = '/Dashboard/Chat'; });
     }
 
     // Attach File Logic
@@ -253,6 +247,14 @@
             this.value = ''; // reset
         });
     }
+
+    // Configure marked to open links in new tab
+    const renderer = new marked.Renderer();
+    renderer.link = function(href, title, text) {
+        let link = marked.Renderer.prototype.link.call(this, href, title, text);
+        return link.replace('<a', '<a target="_blank" rel="noopener noreferrer"');
+    };
+    marked.setOptions({ renderer: renderer });
 
     // Helper: always read current session id dynamically
     function getSessionId() { return sessionIdInput.value || null; }
@@ -320,9 +322,9 @@
 
         if (role !== 'user') {
             const avatar = document.createElement('div');
-            avatar.className = 'ai-avatar-sm me-2';
-            avatar.style.cssText = 'width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,#6c63ff,#48cae4);display:flex;align-items:center;justify-content:center;flex-shrink:0;';
-            avatar.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>';
+            avatar.className = 'ai-avatar-sm me-2 mt-1';
+            avatar.style.cssText = 'width:32px;height:32px;border-radius:50%;background:#e0e7ff;display:flex;align-items:center;justify-content:center;flex-shrink:0;border:1px solid #c7d2fe;';
+            avatar.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#4f46e5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>'; // Just a simple icon placeholder
             wrapper.appendChild(avatar);
         }
 

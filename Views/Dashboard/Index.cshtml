@@ -1,7 +1,11 @@
 ﻿@model IEnumerable<DarkNetCore.Models.TaskItem>
+@using DarkNetCore.Models
 
 @{
     ViewData["Title"] = "Dashboard";
+    var streak = ViewBag.Streak as StreakRecord;
+    var sleepRecords = ViewBag.SleepRecords as IEnumerable<SleepRecord>;
+    var avgSleep = sleepRecords != null && sleepRecords.Any() ? Math.Round(sleepRecords.Average(s => s.TotalHours), 1) : 0;
 }
 
 <div class="dashboard-container container-fluid p-4">
@@ -11,8 +15,8 @@
             <div class="stat-card glass-panel p-3">
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
-                        <h6 class="text-light opacity-75 mb-1">Total Tasks</h6>
-                        <h3 class="mb-0">@Model.Count()</h3>
+                        <h6 class="text-secondary mb-1">Total Tasks</h6>
+                        <h3 class="mb-0 text-dark">@Model.Count()</h3>
                     </div>
                     <i data-lucide="list-todo" class="text-primary" size="32"></i>
                 </div>
@@ -22,8 +26,8 @@
             <div class="stat-card glass-panel p-3">
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
-                        <h6 class="text-light opacity-75 mb-1">Pending</h6>
-                        <h3 class="mb-0">@Model.Count(x => !x.IsCompleted)</h3>
+                        <h6 class="text-secondary mb-1">Pending</h6>
+                        <h3 class="mb-0 text-dark">@Model.Count(x => !x.IsCompleted)</h3>
                     </div>
                     <i data-lucide="clock" class="text-warning" size="32"></i>
                 </div>
@@ -33,24 +37,46 @@
             <div class="stat-card glass-panel p-3">
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
-                        <h6 class="text-light opacity-75 mb-1">Completed</h6>
-                        <h3 class="mb-0">@Model.Count(x => x.IsCompleted)</h3>
+                        <h6 class="text-secondary mb-1">Completed</h6>
+                        <h3 class="mb-0 text-dark">@Model.Count(x => x.IsCompleted)</h3>
                     </div>
                     <i data-lucide="check-circle" class="text-success" size="32"></i>
                 </div>
             </div>
         </div>
         <div class="col-md-3">
-            <div class="stat-card glass-panel p-3">
+            <div class="stat-card glass-panel p-3 h-100">
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
-                        <h6 class="text-light opacity-75 mb-1">Streaks</h6>
-                        <h3 class="mb-0">🔥 5 Days</h3>
+                        <h6 class="text-secondary mb-1">Streak</h6>
+                        <h3 class="mb-0 text-dark">🔥 @(streak?.CurrentStreak ?? 0) GÜN</h3>
                     </div>
                 </div>
                 <div class="progress mt-2" style="height: 6px;">
-                    <div class="progress-bar bg-warning" role="progressbar" style="width: 70%"></div>
+                    <div class="progress-bar bg-warning" role="progressbar" style="width: @(Math.Min(100, (streak?.CurrentStreak ?? 0) * 10))%"></div>
                 </div>
+                <div class="text-secondary small mt-1">En İyi: @(streak?.LongestStreak ?? 0) Gün</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sleep Panel & Task List Row -->
+    <div class="row g-4 mb-4">
+        <!-- Sleep Tracker -->
+        <div class="col-lg-12">
+            <div class="glass-panel p-3 d-flex align-items-center justify-content-between">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="bg-primary-subtle p-2 rounded-circle">
+                        <i data-lucide="moon" class="text-primary" size="24"></i>
+                    </div>
+                    <div>
+                        <h6 class="mb-0 text-dark fw-semibold">Uyku Takibi</h6>
+                        <small class="text-secondary">Son 7 Günlük Ortalama: <strong class="text-dark">@avgSleep saat</strong></small>
+                    </div>
+                </div>
+                <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#addSleepModal">
+                    <i data-lucide="plus" class="me-1" size="16"></i> Kayıt Ekle
+                </button>
             </div>
         </div>
     </div>
@@ -154,6 +180,63 @@
                     </div>
                     <button type="submit" class="btn btn-primary w-100 py-2 fw-bold" style="border-radius: 12px;">Planla & Takvime Ekle</button>
                 </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add Sleep Modal -->
+<div class="modal fade" id="addSleepModal" tabindex="-1" aria-labelledby="addSleepModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content glass-panel border-0" style="background: rgba(255,255,255,0.95);">
+            <div class="modal-header border-bottom-0 pb-0">
+                <h5 class="modal-title fw-bold text-dark" id="addSleepModalLabel"><i data-lucide="moon text-indigo" class="me-2 text-primary"></i>Uyku Kaydı Ekle</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="addSleepForm" action="/Dashboard/AddSleepRecord" method="post">
+                    <div class="row g-3 mb-3">
+                        <div class="col-sm-6">
+                            <label class="form-label text-secondary small fw-bold mb-1">Uyuma Saati</label>
+                            <input type="datetime-local" class="form-control" name="SleepStart" required>
+                        </div>
+                        <div class="col-sm-6">
+                            <label class="form-label text-secondary small fw-bold mb-1">Uyanma Saati</label>
+                            <input type="datetime-local" class="form-control" name="SleepEnd" required>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label text-secondary small fw-bold mb-1">Uyku Kalitesi (1-10)</label>
+                        <input type="range" class="form-range" min="1" max="10" name="QualityScore" id="sleepQuality" value="5" oninput="document.getElementById('qualityVal').innerText = this.value">
+                        <div class="text-center fw-bold" id="qualityVal">5</div>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100 py-2 fw-bold" style="border-radius: 12px; background-color: #4b0082; border-color: #4b0082;">Kaydet</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<!-- Task Detail Modal -->
+<div class="modal fade" id="taskDetailModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0" style="background: rgba(255,255,255,0.97); border-radius: 16px;">
+            <div class="modal-header border-bottom-0 pb-0">
+                <h5 class="modal-title fw-bold text-dark" id="taskDetailTitle">Görev Detayı</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body pt-2">
+                <p class="text-secondary mb-1 small"><i data-lucide="calendar" size="14" class="me-1"></i> <span id="taskDetailDate"></span></p>
+                <p class="mb-0"><span id="taskDetailStatus" class="badge bg-secondary-subtle text-secondary"></span></p>
+            </div>
+            <div class="modal-footer border-top-0 pt-0 gap-2">
+                <button type="button" class="btn btn-success" id="taskDetailCompleteBtn" data-bs-dismiss="modal">
+                    ✅ Tamamlandı İşaretle
+                </button>
+                <button type="button" class="btn btn-outline-danger" id="taskDetailDeleteBtn" data-bs-dismiss="modal">
+                    <i data-lucide="trash" size="14" class="me-1"></i> Sil
+                </button>
             </div>
         </div>
     </div>
