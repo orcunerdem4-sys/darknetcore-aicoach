@@ -111,40 +111,43 @@
         </div>
     </div>
 
-    <!-- Floating Feedback/Notes Button -->
-    <button class="btn btn-primary shadow-lg d-flex align-items-center justify-content-center fw-bold" 
-            type="button" data-bs-toggle="offcanvas" data-bs-target="#feedbackOffcanvas" aria-controls="feedbackOffcanvas"
-            style="position: fixed; bottom: 30px; left: 30px; padding: 0 20px; height: 50px; border-radius: 25px; z-index: 1050; border: 2px solid white; transition: transform 0.2s;">
-        <i data-lucide="pen-tool" size="20" class="text-white me-2"></i> Not Ekle
-    </button>
+    @if (User.Identity != null && User.Identity.IsAuthenticated)
+    {
+        <!-- Floating Feedback/Notes Button -->
+        <button class="btn btn-primary shadow-lg d-flex align-items-center justify-content-center fw-bold" 
+                type="button" data-bs-toggle="offcanvas" data-bs-target="#feedbackOffcanvas" aria-controls="feedbackOffcanvas"
+                style="position: fixed; bottom: 30px; left: 30px; padding: 0 20px; height: 50px; border-radius: 25px; z-index: 1050; border: 2px solid white; transition: transform 0.2s;">
+            <i data-lucide="pen-tool" size="20" class="text-white me-2"></i> Not Ekle
+        </button>
 
-    <!-- Feedback Offcanvas Panel -->
-    <div class="offcanvas offcanvas-end shadow" tabindex="-1" id="feedbackOffcanvas" aria-labelledby="feedbackOffcanvasLabel" style="width: 400px; border-left: none;">
-        <div class="offcanvas-header text-white" style="background: #059669;">
-            <h5 class="offcanvas-title d-flex align-items-center fw-bold" id="feedbackOffcanvasLabel">
-                <i data-lucide="notebook" class="me-2"></i> Akıllı Notlar & Fikirler
-            </h5>
-            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas" aria-label="Close"></button>
-        </div>
-        <div class="offcanvas-body d-flex flex-column" style="background-color: #f8fafc;">
-            <p class="small text-secondary mb-3">Mobil cihazdayken aklınıza gelen geliştirmeleri veya ders notlarını buraya hızlıca kaydedebilirsiniz.</p>
-            
-            <div class="mb-3">
-                <textarea id="feedbackInput" class="form-control border-0 shadow-sm" rows="3" placeholder="Yeni bir not yazın..." style="border-radius: 12px; padding: 15px; resize: none;"></textarea>
+        <!-- Feedback Offcanvas Panel -->
+        <div class="offcanvas offcanvas-end shadow" tabindex="-1" id="feedbackOffcanvas" aria-labelledby="feedbackOffcanvasLabel" style="width: 400px; border-left: none;">
+            <div class="offcanvas-header text-white" style="background: #059669;">
+                <h5 class="offcanvas-title d-flex align-items-center fw-bold" id="feedbackOffcanvasLabel">
+                    <i data-lucide="notebook" class="me-2"></i> Akıllı Notlar & Fikirler
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas" aria-label="Close"></button>
             </div>
-            <button class="btn btn-primary rounded-pill mb-4 w-100 fw-bold shadow-sm" onclick="saveFeedback()">
-                <i data-lucide="save" size="16" class="me-1"></i> Notu Kaydet
-            </button>
+            <div class="offcanvas-body d-flex flex-column" style="background-color: #f8fafc;">
+                <p class="small text-secondary mb-3">Mobil cihazdayken aklınıza gelen geliştirmeleri veya ders notlarını buraya hızlıca kaydedebilirsiniz.</p>
+                
+                <div class="mb-3">
+                    <textarea id="feedbackInput" class="form-control border-0 shadow-sm" rows="3" placeholder="Yeni bir not yazın..." style="border-radius: 12px; padding: 15px; resize: none;"></textarea>
+                </div>
+                <button class="btn btn-primary rounded-pill mb-4 w-100 fw-bold shadow-sm" onclick="saveFeedback()">
+                    <i data-lucide="save" size="16" class="me-1"></i> Notu Kaydet
+                </button>
 
-            <h6 class="fw-bold text-dark border-bottom pb-2 mb-3 d-flex align-items-center">
-                <i data-lucide="history" size="16" class="me-2"></i> Kaydedilen Notlar
-            </h6>
-            <div id="feedbackList" class="flex-grow-1 overflow-auto d-flex flex-column gap-3 mb-2 pe-1">
-                <!-- Notes will be loaded here -->
-                <div class="text-center text-muted small mt-4">Yükleniyor...</div>
+                <h6 class="fw-bold text-dark border-bottom pb-2 mb-3 d-flex align-items-center">
+                    <i data-lucide="history" size="16" class="me-2"></i> Kaydedilen Notlar
+                </h6>
+                <div id="feedbackList" class="flex-grow-1 overflow-auto d-flex flex-column gap-3 mb-2 pe-1">
+                    <!-- Notes will be loaded here -->
+                    <div class="text-center text-muted small mt-4">Yükleniyor...</div>
+                </div>
             </div>
         </div>
-    </div>
+    }
 
     <!-- iOS PWA Install Banner -->
     <div id="iosPwaBanner" style="display:none; position:fixed; bottom:0; left:0; right:0; z-index:9999;
@@ -183,8 +186,13 @@
 
         async function loadFeedbacks() {
             const list = document.getElementById('feedbackList');
+            if(!list) return;
             try {
                 const res = await fetch('/Dashboard/GetFeedbacks');
+                if (res.redirected) {
+                    window.location.href = '/Account/Login';
+                    return;
+                }
                 const data = await res.json();
                 
                 list.innerHTML = '';
@@ -203,12 +211,13 @@
                 });
                 lucide.createIcons();
             } catch (err) {
-                list.innerHTML = '<div class="text-danger small">Notlar yüklenirken hata oluştu.</div>';
+                list.innerHTML = '<div class="text-danger small p-3 text-center border rounded">Notlar yüklenirken hata oluştu. Lütfen bağlantınızı kontrol edin.</div>';
             }
         }
 
         async function saveFeedback() {
             const input = document.getElementById('feedbackInput');
+            if(!input) return;
             const content = input.value.trim();
             if(!content) return;
 
@@ -218,6 +227,10 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ content: content })
                 });
+                if (res.redirected) {
+                    window.location.href = '/Account/Login';
+                    return;
+                }
                 if(res.ok) {
                     input.value = '';
                     loadFeedbacks();
@@ -225,7 +238,7 @@
                     alert('Kaydetme başarısız oldu.');
                 }
             } catch (err) {
-                alert('Sunucuya ulaşılamadı.');
+                alert('Sunucuya ulaşılamadı. Lütfen bağlantınızı kontrol edin.');
             }
         }
 

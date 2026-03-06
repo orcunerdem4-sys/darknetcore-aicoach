@@ -8,6 +8,19 @@
     var avgSleep = sleepRecords != null && sleepRecords.Any() ? Math.Round(sleepRecords.Average(s => s.TotalHours), 1) : 0;
 }
 
+@section Styles {
+    <style>
+        .dash-title {
+            color: #1f2937 !important; /* Very Dark Gray */
+            font-weight: 700;
+        }
+        .dash-subtitle {
+            color: #4b5563 !important; /* Medium Gray */
+            font-weight: 500;
+        }
+    </style>
+}
+
 <div class="dashboard-container container-fluid p-4">
     <!-- Top Stats Row -->
     <div class="row mb-4">
@@ -15,8 +28,8 @@
             <div class="stat-card glass-panel p-3">
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
-                        <h6 class="text-secondary mb-1">Total Tasks</h6>
-                        <h3 class="mb-0 text-dark">@Model.Count()</h3>
+                        <h6 class="dash-subtitle mb-1">Total Tasks</h6>
+                        <h3 class="mb-0 dash-title">@Model.Count()</h3>
                     </div>
                     <i data-lucide="list-todo" class="text-primary" size="32"></i>
                 </div>
@@ -26,8 +39,8 @@
             <div class="stat-card glass-panel p-3">
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
-                        <h6 class="text-secondary mb-1">Pending</h6>
-                        <h3 class="mb-0 text-dark">@Model.Count(x => !x.IsCompleted)</h3>
+                        <h6 class="dash-subtitle mb-1">Pending</h6>
+                        <h3 class="mb-0 dash-title">@Model.Count(x => !x.IsCompleted)</h3>
                     </div>
                     <i data-lucide="clock" class="text-warning" size="32"></i>
                 </div>
@@ -37,8 +50,8 @@
             <div class="stat-card glass-panel p-3">
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
-                        <h6 class="text-secondary mb-1">Completed</h6>
-                        <h3 class="mb-0 text-dark">@Model.Count(x => x.IsCompleted)</h3>
+                        <h6 class="dash-subtitle mb-1">Completed</h6>
+                        <h3 class="mb-0 dash-title">@Model.Count(x => x.IsCompleted)</h3>
                     </div>
                     <i data-lucide="check-circle" class="text-success" size="32"></i>
                 </div>
@@ -48,14 +61,14 @@
             <div class="stat-card glass-panel p-3 h-100">
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
-                        <h6 class="text-secondary mb-1">Streak</h6>
-                        <h3 class="mb-0 text-dark">🔥 @(streak?.CurrentStreak ?? 0) GÜN</h3>
+                        <h6 class="dash-subtitle mb-1">Streak</h6>
+                        <h3 class="mb-0 dash-title">🔥 @(streak?.CurrentStreak ?? 0) GÜN</h3>
                     </div>
                 </div>
                 <div class="progress mt-2" style="height: 6px;">
                     <div class="progress-bar bg-warning" role="progressbar" style="width: @(Math.Min(100, (streak?.CurrentStreak ?? 0) * 10))%"></div>
                 </div>
-                <div class="text-secondary small mt-1">En İyi: @(streak?.LongestStreak ?? 0) Gün</div>
+                <div class="dash-subtitle small mt-1">En İyi: @(streak?.LongestStreak ?? 0) Gün</div>
             </div>
         </div>
     </div>
@@ -70,8 +83,8 @@
                         <i data-lucide="moon" class="text-primary" size="24"></i>
                     </div>
                     <div>
-                        <h6 class="mb-0 text-dark fw-semibold">Uyku Takibi</h6>
-                        <small class="text-secondary">Son 7 Günlük Ortalama: <strong class="text-dark">@avgSleep saat</strong></small>
+                        <h6 class="mb-0 dash-title fw-semibold">Uyku Takibi</h6>
+                        <small class="dash-subtitle">Son 7 Günlük Ortalama: <strong class="dash-title">@avgSleep saat</strong></small>
                     </div>
                 </div>
                 <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#addSleepModal">

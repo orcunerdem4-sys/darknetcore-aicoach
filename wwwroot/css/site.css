@@ -26,6 +26,17 @@ body {
     min-height: 100vh;
 }
 
+/* Force Text Colors to Override Bootstrap's Auto Dark Mode */
+.text-dark {
+    color: var(--text-primary) !important;
+}
+.text-secondary {
+    color: var(--text-secondary) !important;
+}
+.text-primary {
+    color: var(--accent-primary) !important;
+}
+
 a {
     text-decoration: none;
     color: inherit;
