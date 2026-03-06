@@ -322,8 +322,8 @@ public class DashboardController : Controller
             }
 
             var result = sb.ToString();
-            // Limit to 12000 chars to avoid token overflow
-            return result.Length > 12000 ? result[..12000] + "\n...(devamı kısaltıldı)" : result;
+            // Limit to 200000 chars to avoid token overflow
+            return result.Length > 200000 ? result[..200000] + "\n...(devamı kısaltıldı)" : result;
         }
         catch (Exception ex)
         {
