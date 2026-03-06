@@ -310,12 +310,13 @@ public class DashboardController : Controller
                     for (int i = 1; i <= maxCol; i++)
                     {
                         var val = row.Cell(i).GetValue<string>()?.Trim() ?? "";
-                        rowData.Add(string.IsNullOrEmpty(val) ? "-" : val);
+                        var colLetter = sheet.Column(i).ColumnLetter();
+                        rowData.Add($"[{colLetter}]: " + (string.IsNullOrEmpty(val) ? "(boş)" : val));
                     }
                     
-                    if (rowData.All(x => x == "-")) continue; // Tamamen boş satırı atla
+                    if (rowData.All(x => x.EndsWith("(boş)"))) continue; // Tamamen boş satırı atla
                     
-                    sb.AppendLine(string.Join(" | ", rowData));
+                    sb.AppendLine($"Satır {row.RowNumber()} | " + string.Join(" | ", rowData));
                 }
                 sb.AppendLine();
             }
