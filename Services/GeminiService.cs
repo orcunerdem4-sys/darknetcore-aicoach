@@ -65,7 +65,8 @@ Example JSON: {{ ""topic"": ""Biology"", ""complexityScore"": 7, ""wordCount"": 
         sb.AppendLine("- Her hafta tekrar eden dersleri gösterir. Dosyada 'Feb 9-13' gibi bir tarih görüyorsan bu yalnızca örnek haftadır.");
         sb.AppendLine("- 'Yarın Salı' diye sorulduğunda: dosyadaki SALI sütununa/satırına bak, tarihe değil GÜNE göre yanıtla.");
         sb.AppendLine("- Dosyada iki sütun yan yana varsa (Türkçe program | İngilizce program), kullanıcı İngilizce programı takip ediyor.");
-        sb.AppendLine("- Excel içeriğindeki ders adlarını, saatleri ve hocaları AYNEN kullan. 'Bilmiyorum' deme.");
+        sb.AppendLine("- EĞER sana verilen dosya özetinde (AnalysisSummary) saatler ve dersler varsa AYNEN kullan.");
+        sb.AppendLine("- EĞER sana dosya içeriği verilmemişse ('Synced from Drive' gibi kısa bir not varsa), uydurma. Kullanıcıya 'Google Drive dosyalarının içeriğini göremiyorum, okuyabilmem için bilgisayardan yüklemen gerekiyor' de.");
 
         if (lessons != null && lessons.Any())
         {
@@ -109,7 +110,7 @@ Example JSON: {{ ""topic"": ""Biology"", ""complexityScore"": 7, ""wordCount"": 
         }
 
         sb.AppendLine("Yanıtlarında markdown kullan. Kısa ve net ol.");
-        sb.AppendLine("Kullanıcı dosyalarını sorarsa yukarıdaki listeden cevap ver — asla 'göremiyorum' veya 'bilmiyorum' deme.");
+        sb.AppendLine("Kullanıcı dosyalarını sorarsa yukarıdaki listeden cevap ver. Eğer dosyanın içeriği verilmemişse asla uydurma, dürüstçe 'göremiyorum' de.");
         sb.AppendLine();
         sb.AppendLine("🛠️ GÖREV VE TAKVİM KOMUTLARI:");
         sb.AppendLine("Eğer kullanıcı takvimine görev EKLENMESİNİ isterse:");
