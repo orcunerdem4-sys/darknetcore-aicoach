@@ -19,6 +19,11 @@ public class ApplicationDbContext : DbContext
     public DbSet<FeedbackNote> FeedbackNotes { get; set; }
     public DbSet<SleepRecord> SleepRecords { get; set; }
     public DbSet<StreakRecord> StreakRecords { get; set; }
+    public DbSet<PushSubscription> PushSubscriptions { get; set; } // Required for web push later
+    public DbSet<StudyGroup> StudyGroups { get; set; }
+    public DbSet<GroupNote> GroupNotes { get; set; }
+    public DbSet<GroupChatMessage> GroupChatMessages { get; set; }
+    public DbSet<MutedUser> MutedUsers { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -74,6 +79,25 @@ public class ApplicationDbContext : DbContext
             .HasMany(s => s.Messages)
             .WithOne(m => m.Session)
             .HasForeignKey(m => m.SessionId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        // Muted Users
+        modelBuilder.Entity<MutedUser>()
+            .HasOne(m => m.MuterUser)
+            .WithMany()
+            .HasForeignKey(m => m.MuterUserId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<MutedUser>()
+            .HasOne(m => m.MutedUserEntity)
+            .WithMany()
+            .HasForeignKey(m => m.MutedUserId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<MutedUser>()
+            .HasOne(m => m.Group)
+            .WithMany()
+            .HasForeignKey(m => m.GroupId)
             .OnDelete(DeleteBehavior.Cascade);
     }
 }

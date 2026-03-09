@@ -332,6 +332,212 @@ public class DatabaseService
         _context.SleepRecords.Add(record);
         await _context.SaveChangesAsync();
     }
+
+    // -----------------------------------------
+    // Study Group Operations
+    // -----------------------------------------
+    public async Task<StudyGroup?> GetUserGroupAsync()
+    {
+        var userId = GetCurrentUserId();
+        var user = await _context.Users.Include(u => u.Group).FirstOrDefaultAsync(u => u.Id == userId);
+        return user?.Group;
+    }
+
+    public async Task<StudyGroup> CreateGroupAsync(string name)
+    {
+        var userId = GetCurrentUserId();
+        var user = await _context.Users.FindAsync(userId);
+        
+        var group = new StudyGroup
+        {
+            Id = Guid.NewGuid().ToString(),
+            Name = name,
+            JoinCode = GenerateJoinCode()
+        };
+        
+        _context.StudyGroups.Add(group);
+        user!.GroupId = group.Id;
+        
+        await _context.SaveChangesAsync();
+        return group;
+    }
+
+    public async Task<bool> JoinGroupAsync(string joinCode)
+    {
+        var group = await _context.StudyGroups.FirstOrDefaultAsync(g => g.JoinCode == joinCode);
+        if (group == null) return false;
+
+        var userId = GetCurrentUserId();
+        var user = await _context.Users.FindAsync(userId);
+        if (user != null)
+        {
+            user.GroupId = group.Id;
+            await _context.SaveChangesAsync();
+            return true;
+        }
+        return false;
+    }
+
+    public async Task LeaveGroupAsync()
+    {
+        var userId = GetCurrentUserId();
+        var user = await _context.Users.FindAsync(userId);
+        if (user != null)
+        {
+            user.GroupId = null;
+            await _context.SaveChangesAsync();
+        }
+    }
+
+    // Group Notes
+    public async Task<List<GroupNote>> GetGroupNotesAsync(string groupId)
+    {
+        return await _context.GroupNotes
+            .Include(n => n.User)
+            .Where(n => n.GroupId == groupId)
+            .OrderByDescending(n => n.CreatedAt)
+            .ToListAsync();
+    }
+
+    public async Task AddGroupNoteAsync(string groupId, string content)
+    {
+        var note = new GroupNote
+        {
+            Id = Guid.NewGuid().ToString(),
+            GroupId = groupId,
+            UserId = GetCurrentUserId(),
+            Content = content,
+            CreatedAt = DateTime.UtcNow
+        };
+        _context.GroupNotes.Add(note);
+        await _context.SaveChangesAsync();
+    }
+
+    public async Task DeleteGroupNoteAsync(string noteId)
+    {
+        var userId = GetCurrentUserId();
+        var note = await _context.GroupNotes.FirstOrDefaultAsync(n => n.Id == noteId && n.UserId == userId);
+        if (note != null)
+        {
+            _context.GroupNotes.Remove(note);
+            await _context.SaveChangesAsync();
+        }
+    }
+
+    // Group Chat Messages
+    public async Task<List<GroupChatMessage>> GetGroupMessagesAsync(string groupId)
+    {
+        return await _context.GroupChatMessages
+            .Where(m => m.GroupId == groupId)
+            .OrderBy(m => m.SentAt)
+            .ToListAsync();
+    }
+
+    public async Task AddGroupMessageAsync(string groupId, string message, string senderName, string? userId = null)
+    {
+        var msg = new GroupChatMessage
+        {
+            Id = Guid.NewGuid().ToString(),
+            GroupId = groupId,
+            UserId = userId,
+            SenderName = senderName,
+            Message = message,
+            SentAt = DateTime.UtcNow
+        };
+        _context.GroupChatMessages.Add(msg);
+        await _context.SaveChangesAsync();
+    }
+
+    private string GenerateJoinCode()
+    {
+        var random = new Random();
+        const string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+        return new string(Enumerable.Repeat(chars, 6)
+            .Select(s => s[random.Next(s.Length)]).ToArray());
+    }
+
+    // ==========================================
+    //         NOTIFICATIONS (PWA PUSH)
+    // ==========================================
+    public async Task<bool> SubscriptionExistsAsync(string userId, string endpoint)
+    {
+        return await _context.PushSubscriptions.AnyAsync(s => s.UserId == userId && s.Endpoint == endpoint);
+    }
+
+    public async Task AddPushSubscriptionAsync(PushSubscription subscription)
+    {
+        _context.PushSubscriptions.Add(subscription);
+        await _context.SaveChangesAsync();
+    }
+
+    public async Task<List<PushSubscription>> GetUserSubscriptionsAsync(string userId)
+    {
+        return await _context.PushSubscriptions.Where(s => s.UserId == userId).ToListAsync();
+    }
+
+    public async Task<List<PushSubscription>> GetGroupSubscriptionsAsync(string groupId)
+    {
+        // First get the IDs of all users in this group
+        var groupUserIds = await _context.Users
+            .Where(u => u.GroupId == groupId)
+            .Select(u => u.Id)
+            .ToListAsync();
+
+        if (!groupUserIds.Any())
+            return new List<PushSubscription>();
+
+        // Then get all their subscriptions
+        return await _context.PushSubscriptions
+            .Where(s => groupUserIds.Contains(s.UserId))
+            .ToListAsync();
+    }
+
+    public async Task<bool> IsGroupMutedAsync(string userId)
+    {
+        var user = await _context.Users.FirstOrDefaultAsync(u => u.Id == userId);
+        return user?.IsGroupMuted ?? false;
+    }
+
+    public async Task ToggleGroupMuteAsync(string userId)
+    {
+        var user = await _context.Users.FirstOrDefaultAsync(u => u.Id == userId);
+        if (user != null)
+        {
+            user.IsGroupMuted = !user.IsGroupMuted;
+            await _context.SaveChangesAsync();
+        }
+    }
+
+    public async Task<List<string>> GetMutedUserIdsAsync(string userId, string groupId)
+    {
+        return await _context.MutedUsers
+            .Where(m => m.MuterUserId == userId && m.GroupId == groupId)
+            .Select(m => m.MutedUserId)
+            .ToListAsync();
+    }
+
+    public async Task ToggleUserMuteAsync(string muterId, string mutedId, string groupId)
+    {
+        var existing = await _context.MutedUsers.FirstOrDefaultAsync(m => 
+            m.MuterUserId == muterId && m.MutedUserId == mutedId && m.GroupId == groupId);
+
+        if (existing != null)
+        {
+            _context.MutedUsers.Remove(existing);
+        }
+        else
+        {
+            var muteEntry = new MutedUser
+            {
+                MuterUserId = muterId,
+                MutedUserId = mutedId,
+                GroupId = groupId,
+                CreatedAt = DateTime.UtcNow
+            };
+            _context.MutedUsers.Add(muteEntry);
+        }
+        await _context.SaveChangesAsync();
+    }
 }
 
 

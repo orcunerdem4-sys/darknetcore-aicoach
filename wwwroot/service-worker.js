@@ -50,3 +50,44 @@ self.addEventListener('fetch', event => {
             })
     );
 });
+
+// ── Web Push Event Listner ──
+self.addEventListener('push', function (event) {
+    if (event.data) {
+        let payload = {};
+        try {
+            payload = event.data.json();
+        } catch (e) {
+            payload = { title: 'Dopamind Bildirimi', message: event.data.text() };
+        }
+
+        const title = payload.title || 'Dopamind';
+        const options = {
+            body: payload.message || 'Yeni bir bildiriminiz var.',
+            icon: '/favicon.ico',
+            badge: '/favicon.ico',
+            data: { url: payload.url || '/' }
+        };
+
+        event.waitUntil(self.registration.showNotification(title, options));
+    }
+});
+
+self.addEventListener('notificationclick', function (event) {
+    event.notification.close();
+    if (event.notification.data && event.notification.data.url) {
+        event.waitUntil(
+            clients.matchAll({ type: 'window' }).then(windowClients => {
+                for (let i = 0; i < windowClients.length; i++) {
+                    let client = windowClients[i];
+                    if (client.url === event.notification.data.url && 'focus' in client) {
+                        return client.focus();
+                    }
+                }
+                if (clients.openWindow) {
+                    return clients.openWindow(event.notification.data.url);
+                }
+            })
+        );
+    }
+});

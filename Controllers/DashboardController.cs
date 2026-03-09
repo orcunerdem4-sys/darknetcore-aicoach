@@ -133,6 +133,15 @@ public class DashboardController : Controller
         var files = await _dataService.GetFilesAsync();
         return View(files);
     }
+
+    [HttpGet]
+    public IActionResult Exam()
+    {
+        // For now, this just returns the static Exam view.
+        // In the future, this can pull user-specific exam progress from DB.
+        return View();
+    }
+
     [HttpPost]
     public async Task<IActionResult> UploadFile(IFormFile file)
     {

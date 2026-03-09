@@ -11,8 +11,13 @@ public class User
     public string PasswordHash { get; set; } = string.Empty;
     public DateTime CreatedAt { get; set; } = DateTime.Now;
 
+    public string? GroupId { get; set; }
+    public StudyGroup? Group { get; set; }
+
     public ICollection<Lesson> Lessons { get; set; } = new List<Lesson>();
     public ICollection<TaskItem> Tasks { get; set; } = new List<TaskItem>();
     public ICollection<UploadedFile> Files { get; set; } = new List<UploadedFile>();
     public ICollection<ChatSession> ChatSessions { get; set; } = new List<ChatSession>();
+
+    public bool IsGroupMuted { get; set; } = false;
 }

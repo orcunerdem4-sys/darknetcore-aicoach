@@ -22,74 +22,34 @@
 }
 
 <div class="dashboard-container container-fluid p-4">
-    <!-- Top Stats Row -->
-    <div class="row mb-4">
-        <div class="col-md-3">
-            <div class="stat-card glass-panel p-3">
-                <div class="d-flex justify-content-between align-items-center">
-                    <div>
-                        <h6 class="dash-subtitle mb-1">Total Tasks</h6>
-                        <h3 class="mb-0 dash-title">@Model.Count()</h3>
-                    </div>
+    <!-- Top Stats Row (Simplified) & Exam Mode Toggle -->
+    <div class="row mb-4 g-3">
+        <div class="col-md-4">
+            <div class="stat-card glass-panel p-3 h-100 d-flex align-items-center">
+                <div class="flex-grow-1">
+                    <h6 class="dash-subtitle mb-1">Toplam Görev</h6>
+                    <h3 class="mb-0 dash-title">@Model.Count()</h3>
+                </div>
+                <div class="bg-primary-subtle p-3 rounded-circle">
                     <i data-lucide="list-todo" class="text-primary" size="32"></i>
                 </div>
             </div>
         </div>
-        <div class="col-md-3">
-            <div class="stat-card glass-panel p-3">
-                <div class="d-flex justify-content-between align-items-center">
-                    <div>
-                        <h6 class="dash-subtitle mb-1">Pending</h6>
-                        <h3 class="mb-0 dash-title">@Model.Count(x => !x.IsCompleted)</h3>
-                    </div>
-                    <i data-lucide="clock" class="text-warning" size="32"></i>
+        <div class="col-md-8">
+            <div class="stat-card glass-panel p-3 h-100 d-flex align-items-center bg-white" style="border-left: 4px solid var(--accent-primary);">
+                <div class="flex-grow-1">
+                    <h6 class="dash-subtitle mb-1"><i data-lucide="target" class="me-1 text-primary" size="16"></i> Hedefler & Sınavlar</h6>
+                    <p class="mb-0 text-dark small fw-medium" id="examModeDesc">Büyük bir sınava mı hazırlanıyorsun? (YKS, KPSS vb.)</p>
                 </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="stat-card glass-panel p-3">
-                <div class="d-flex justify-content-between align-items-center">
-                    <div>
-                        <h6 class="dash-subtitle mb-1">Completed</h6>
-                        <h3 class="mb-0 dash-title">@Model.Count(x => x.IsCompleted)</h3>
-                    </div>
-                    <i data-lucide="check-circle" class="text-success" size="32"></i>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="stat-card glass-panel p-3 h-100">
-                <div class="d-flex justify-content-between align-items-center">
-                    <div>
-                        <h6 class="dash-subtitle mb-1">Streak</h6>
-                        <h3 class="mb-0 dash-title">🔥 @(streak?.CurrentStreak ?? 0) GÜN</h3>
-                    </div>
-                </div>
-                <div class="progress mt-2" style="height: 6px;">
-                    <div class="progress-bar bg-warning" role="progressbar" style="width: @(Math.Min(100, (streak?.CurrentStreak ?? 0) * 10))%"></div>
-                </div>
-                <div class="dash-subtitle small mt-1">En İyi: @(streak?.LongestStreak ?? 0) Gün</div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Sleep Panel & Task List Row -->
-    <div class="row g-4 mb-4">
-        <!-- Sleep Tracker -->
-        <div class="col-lg-12">
-            <div class="glass-panel p-3 d-flex align-items-center justify-content-between">
                 <div class="d-flex align-items-center gap-3">
-                    <div class="bg-primary-subtle p-2 rounded-circle">
-                        <i data-lucide="moon" class="text-primary" size="24"></i>
-                    </div>
-                    <div>
-                        <h6 class="mb-0 dash-title fw-semibold">Uyku Takibi</h6>
-                        <small class="dash-subtitle">Son 7 Günlük Ortalama: <strong class="dash-title">@avgSleep saat</strong></small>
+                    <a href="/Dashboard/Exam" class="btn btn-sm btn-outline-primary d-none" id="goToExamBtn">
+                        Sınav Paneline Git 
+                        <i data-lucide="arrow-right" size="14" class="ms-1"></i>
+                    </a>
+                    <div class="form-check form-switch" style="font-size: 1.2rem; margin: 0;">
+                        <input class="form-check-input" type="checkbox" role="switch" id="examModeToggle" title="Sınav Modunu Aç/Kapat">
                     </div>
                 </div>
-                <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#addSleepModal">
-                    <i data-lucide="plus" class="me-1" size="16"></i> Kayıt Ekle
-                </button>
             </div>
         </div>
     </div>
@@ -116,15 +76,37 @@
         <!-- Right Sidebar (Task Management & AI Chat) -->
         <div class="col-lg-4 d-flex flex-column gap-4">
 
-            <!-- Upcoming List -->
-            <div class="glass-panel p-4 flex-grow-1" style="min-height: 300px; max-height: 350px; overflow-y: auto;">
-                <h5 class="mb-3 d-flex justify-content-between align-items-center">
-                    <span><i data-lucide="list" class="me-2"></i>Upcoming</span>
-                    <button class="btn btn-sm btn-primary rounded-circle p-1" data-bs-toggle="modal" data-bs-target="#addTaskModal" title="Hızlı Görev Ekle">
-                        <i data-lucide="plus" size="16"></i>
-                    </button>
+            <!-- Günlük Özet Paneli (Combined Streaks, Sleep, Tasks) -->
+            <div class="glass-panel p-4 flex-grow-1 d-flex flex-column" style="min-height: 400px; max-height: 500px;">
+                <h5 class="mb-3 d-flex justify-content-between align-items-center fw-bold">
+                    <span><i data-lucide="activity" class="me-2 text-primary"></i>Günlük Özet</span>
                 </h5>
-                <div id="taskList" class="list-group list-group-flush">
+                
+                <!-- Streak & Sleep Mini Cards inside the Panel -->
+                <div class="d-flex gap-2 mb-3">
+                    <div class="bg-light p-2 rounded flex-fill text-center" style="border: 1px solid var(--border-color);">
+                        <div class="text-warning mb-1"><i data-lucide="flame" size="20"></i></div>
+                        <h5 class="mb-0 fw-bold">@(streak?.CurrentStreak ?? 0) Gün</h5>
+                        <small class="text-muted" style="font-size: 0.7rem;">Streak</small>
+                    </div>
+                    <div class="bg-light p-2 rounded flex-fill text-center position-relative" style="border: 1px solid var(--border-color);">
+                        <div class="text-indigo mb-1"><i data-lucide="moon" size="20" style="color: #4f46e5;"></i></div>
+                        <h5 class="mb-0 fw-bold">@avgSleep</h5>
+                        <small class="text-muted" style="font-size: 0.7rem;">Ort. Uyku</small>
+                        <!-- Hızlı uyku ekleme butonu -->
+                        <button class="btn btn-sm btn-link p-0 position-absolute top-0 end-0 m-1" data-bs-toggle="modal" data-bs-target="#addSleepModal" title="Uyku Ekle">
+                            <i data-lucide="plus-circle" size="14" style="color: #4f46e5;"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="d-flex justify-content-between align-items-center mb-2 mt-2">
+                    <h6 class="mb-0 text-dark fw-bold" style="font-size: 0.9rem;">Yaklaşan Görevler</h6>
+                    <button class="btn btn-sm btn-outline-primary rounded-circle p-1" style="width: 24px; height: 24px; display: flex; align-items: center; justify-content: center;" data-bs-toggle="modal" data-bs-target="#addTaskModal" title="Hızlı Görev Ekle">
+                        <i data-lucide="plus" size="14"></i>
+                    </button>
+                </div>
+                <div id="taskList" class="list-group list-group-flush flex-grow-1" style="overflow-y: auto;">
                     <!-- Tasks will be loaded here via JS -->
                 </div>
             </div>
@@ -258,4 +240,44 @@
 @section Scripts {
     <script src="~/lib/fullcalendar/index.global.min.js"></script>
     <script src="~/js/dashboard.js" asp-append-version="true"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const examModeToggle = document.getElementById('examModeToggle');
+            const examModeDesc = document.getElementById('examModeDesc');
+            const goToExamBtn = document.getElementById('goToExamBtn');
+            const navExamBtn = document.getElementById('navExamBtn'); // Bottom nav exam button
+
+            // Load saved state
+            const isExamMode = localStorage.getItem('dopamind_exam_mode') === 'true';
+            if (examModeToggle) {
+                examModeToggle.checked = isExamMode;
+                updateExamUI(isExamMode);
+
+                examModeToggle.addEventListener('change', (e) => {
+                    const isChecked = e.target.checked;
+                    localStorage.setItem('dopamind_exam_mode', isChecked);
+                    updateExamUI(isChecked);
+                    
+                    if(isChecked) {
+                        window.showToast?.("Sınav modu aktifleştirildi, başarılar! 🚀", "success");
+                    }
+                });
+            }
+
+            function updateExamUI(isActive) {
+                if (isActive) {
+                    examModeDesc.innerHTML = `<span class=\"text-success fw-bold\"><i data-lucide=\"check-circle-2\" size=\"14\" class=\"me-1\"></i>Sınav Modu Aktif</span> - Hazırlıklarına odaklan!`;
+                    goToExamBtn?.classList.remove('d-none');
+                    navExamBtn?.classList.remove('d-none');
+                } else {
+                    examModeDesc.textContent = "Büyük bir sınava mı hazırlanıyorsun? (YKS, KPSS vb.)";
+                    goToExamBtn?.classList.add('d-none');
+                    navExamBtn?.classList.add('d-none');
+                }
+                if(window.lucide) {
+                    window.lucide.createIcons();
+                }
+            }
+        });
+    </script>
 }

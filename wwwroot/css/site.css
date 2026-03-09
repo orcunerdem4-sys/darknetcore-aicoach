@@ -30,9 +30,11 @@ body {
 .text-dark {
     color: var(--text-primary) !important;
 }
+
 .text-secondary {
     color: var(--text-secondary) !important;
 }
+
 .text-primary {
     color: var(--accent-primary) !important;
 }
@@ -265,86 +267,97 @@ a {
     margin-bottom: 0.5rem;
 }
 
-/* ─── Hamburger Menu ─────────────────────────────── */
-.hamburger-btn {
-    display: none;
-    background: none;
-    border: none;
-    cursor: pointer;
-    padding: 6px;
-    color: var(--text-primary);
-    border-radius: 8px;
+/* ─── Mobile Bottom Navigation ─────────────────────────────── */
+.mobile-bottom-nav {
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 70px;
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border-top: 1px solid rgba(0, 0, 0, 0.05);
+    box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.05);
+    z-index: 1050;
+    padding-bottom: env(safe-area-inset-bottom);
+    /* For modern smartphones with home indicators */
 }
 
-.mobile-nav-overlay {
-    display: none;
-    position: fixed;
-    inset: 0;
-    background: rgba(0, 0, 0, 0.4);
-    z-index: 1100;
-}
-
-.mobile-nav-panel {
-    position: fixed;
-    top: 0;
-    left: -100%;
-    width: 260px;
-    height: 100vh;
-    background: #fff;
-    z-index: 1200;
-    transition: left 0.3s ease;
-    box-shadow: 4px 0 20px rgba(0, 0, 0, 0.12);
+.bottom-nav-item {
     display: flex;
     flex-direction: column;
-    padding: 1.5rem;
-    gap: 1rem;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-secondary);
+    text-decoration: none;
+    font-size: 0.75rem;
+    font-weight: 500;
+    width: 20%;
+    height: 100%;
+    transition: all 0.2s ease;
 }
 
-.mobile-nav-panel.open {
-    left: 0;
+.bottom-nav-item i {
+    width: 22px;
+    height: 22px;
+    margin-bottom: 4px;
+    transition: all 0.2s ease;
 }
 
-.mobile-nav-overlay.open {
-    display: block;
+.bottom-nav-item:hover,
+.bottom-nav-item.active {
+    color: var(--accent-primary);
 }
 
-.mobile-nav-panel .mobile-nav-logo {
+.bottom-nav-item.active i {
+    transform: translateY(-2px);
+}
+
+/* AI Coach Floating Central Button */
+.bottom-nav-item.ai-coach-btn {
+    position: relative;
+    top: -15px;
+}
+
+.ai-coach-icon {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
-    font-size: 1.4rem;
-    font-weight: 800;
-    color: var(--accent-primary);
-    padding-bottom: 1rem;
-    border-bottom: 1px solid var(--border-color);
+    justify-content: center;
+    width: 56px;
+    height: 56px;
+    background: linear-gradient(135deg, #059669 0%, #10b981 100%);
+    border-radius: 50%;
+    color: white;
+    box-shadow: 0 4px 15px rgba(5, 150, 105, 0.4);
+    margin-bottom: 4px;
+    border: 4px solid white;
+    transition: transform 0.2s, box-shadow 0.2s;
 }
 
-.mobile-nav-panel .nav-link {
-    font-size: 1.05rem;
-    padding: 0.75rem 1rem;
-    border-radius: 10px;
-    width: 100%;
+.bottom-nav-item.ai-coach-btn:hover .ai-coach-icon,
+.bottom-nav-item.ai-coach-btn.active .ai-coach-icon {
+    transform: scale(1.05);
+    box-shadow: 0 6px 20px rgba(5, 150, 105, 0.6);
 }
 
-.mobile-nav-close {
-    position: absolute;
-    top: 16px;
-    right: 16px;
-    background: none;
-    border: none;
-    font-size: 1.5rem;
-    cursor: pointer;
-    color: var(--text-secondary);
+.ai-coach-icon i {
+    color: white !important;
+    margin: 0 !important;
+    width: 24px !important;
+    height: 24px !important;
 }
 
-/* ─── Tablet (≤768px) ─────────────────────────────── */
+/* Hide desktop nav & user-actions on tablet/mobile */
 @media (max-width: 768px) {
     .main-header {
         padding: 0.75rem 1rem;
         height: 60px;
     }
 
-    /* Hide desktop nav & user-actions, show hamburger */
     .main-nav {
         display: none;
     }
@@ -353,18 +366,14 @@ a {
         display: none;
     }
 
-    .hamburger-btn {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-    }
-
     .logo-gradient-text {
         font-size: 1.3rem;
     }
 
     .main-content {
         padding: 0.75rem;
+        padding-bottom: 80px;
+        /* Add extra padding so content isn't hidden behind bottom nav */
     }
 
     .hero-title {

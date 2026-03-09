@@ -60,8 +60,9 @@ document.addEventListener('DOMContentLoaded', function () {
                             if (response.ok) {
                                 calendar.refetchEvents();
                                 loadTaskList();
+                                window.showToast("Görev silindi.");
                             } else {
-                                alert('Hata oluştu!');
+                                window.showToast("Görev silinirken hata oluştu!", "error");
                             }
                         });
                 }
@@ -142,8 +143,9 @@ document.addEventListener('DOMContentLoaded', function () {
                             var modalInstance = bootstrap.Modal.getInstance(myModalEl);
                             if (modalInstance) modalInstance.hide();
                         }
+                        window.showToast("Görev eklendi!");
                     } else {
-                        alert('Error adding task');
+                        window.showToast("Görev eklenirken hata oluştu.", "error");
                     }
                 });
         });

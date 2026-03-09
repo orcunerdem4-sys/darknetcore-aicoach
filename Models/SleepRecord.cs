@@ -3,7 +3,7 @@ namespace DarkNetCore.Models;
 public class SleepRecord
 {
     public string Id { get; set; } = Guid.NewGuid().ToString();
-    public string UserId { get; set; } = string.Empty;
+    public string? UserId { get; set; }
     public User? User { get; set; }
 
     public DateTime SleepStart { get; set; }

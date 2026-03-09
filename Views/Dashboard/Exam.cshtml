@@ -1,0 +1,132 @@
+@{
+    ViewData["Title"] = "Sınav Paneli";
+}
+
+<div class="dashboard-container container-fluid p-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h4 class="mb-0 fw-bold"><i data-lucide="graduation-cap" class="me-2 text-primary" size="28"></i> Sınav Hazırlık Paneli</h4>
+        
+        <!-- Exam Type Selector -->
+        <select class="form-select w-auto shadow-sm" id="examTypeSelect" style="border-radius: 12px; font-weight: 600;">
+            <option value="yks">YKS</option>
+            <option value="kpss">KPSS</option>
+            <option value="dgs">DGS</option>
+            <option value="ales">ALES</option>
+            <option value="lgs">LGS</option>
+            <option value="tus">TUS</option>
+            <option value="dus">DUS</option>
+            <option value="yokdil">YÖKDİL</option>
+        </select>
+    </div>
+
+    <!-- Countdown Row -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="glass-panel text-center text-white py-4 position-relative overflow-hidden" style="background: linear-gradient(135deg, #059669 0%, #047857 100%); border: none;">
+                <div class="position-relative z-index-2">
+                    <p class="mb-1 text-white-50 fw-semibold text-uppercase" style="letter-spacing: 1px;"><span id="examNameLabel">YKS</span>'ye Kalan Zaman</p>
+                    <div class="d-flex justify-content-center gap-4 mt-3" id="countdownDisplay">
+                        <!-- Days -->
+                        <div class="text-center">
+                            <h2 class="display-4 fw-bold mb-0 text-white shadow-sm" id="cdDays">124</h2>
+                            <small class="text-white-50 d-block mt-1">Gün</small>
+                        </div>
+                        <div class="display-4 fw-light opacity-50">:</div>
+                        <!-- Hours -->
+                        <div class="text-center">
+                            <h2 class="display-4 fw-bold mb-0 text-white shadow-sm" id="cdHours">15</h2>
+                            <small class="text-white-50 d-block mt-1">Saat</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4 mb-4">
+        <!-- Net Progress (Deneme Özetleri) Placeholder -->
+        <div class="col-md-7">
+            <div class="glass-panel p-4 h-100">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h6 class="fw-bold mb-0"><i data-lucide="bar-chart-3" class="me-2 text-warning"></i>Son Denemeler (Net Ortalaması)</h6>
+                    <button class="btn btn-sm btn-outline-primary shadow-sm"><i data-lucide="plus" size="14"></i> Deneme Gir</button>
+                </div>
+                <div class="bg-light rounded p-3 text-center border d-flex flex-column align-items-center justify-content-center" style="height: 250px; border-style: dashed !important;">
+                    <i data-lucide="trending-up" class="text-muted opacity-50 mb-2" size="48"></i>
+                    <p class="text-muted mb-0">Henüz deneme verisi girmedin.</p>
+                    <small class="text-secondary">İlk denemeni girerek gelişimini takip etmeye başla.</small>
+                </div>
+            </div>
+        </div>
+
+        <!-- Topic Progress (Kazanım İlerlemeleri) Placeholder -->
+        <div class="col-md-5">
+            <div class="glass-panel p-4 h-100">
+                <h6 class="fw-bold mb-4"><i data-lucide="crosshair" class="me-2 text-indigo"></i>Kazanım İlerlemesi</h6>
+                <div class="d-flex flex-column gap-3">
+                    <!-- Stat 1 -->
+                    <div>
+                        <div class="d-flex justify-content-between small mb-1">
+                            <span class="fw-bold text-dark">Matematik</span>
+                            <span class="text-primary fw-bold">45%</span>
+                        </div>
+                        <div class="progress shadow-sm" style="height: 10px;">
+                            <div class="progress-bar bg-primary rounded-pill" role="progressbar" style="width: 45%;"></div>
+                        </div>
+                    </div>
+                    <!-- Stat 2 -->
+                    <div>
+                        <div class="d-flex justify-content-between small mb-1">
+                            <span class="fw-bold text-dark">Türkçe</span>
+                            <span class="text-success fw-bold">75%</span>
+                        </div>
+                        <div class="progress shadow-sm" style="height: 10px;">
+                            <div class="progress-bar bg-success rounded-pill" role="progressbar" style="width: 75%;"></div>
+                        </div>
+                    </div>
+                    <!-- Stat 3 -->
+                    <div>
+                        <div class="d-flex justify-content-between small mb-1">
+                            <span class="fw-bold text-dark">Fen Bilimleri</span>
+                            <span class="text-warning fw-bold">20%</span>
+                        </div>
+                        <div class="progress shadow-sm" style="height: 10px;">
+                            <div class="progress-bar bg-warning rounded-pill" role="progressbar" style="width: 20%;"></div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="mt-4 text-center">
+                    <button class="btn btn-outline-secondary btn-sm w-100"><i data-lucide="list-checks" size="14" class="me-1"></i> Tüm Konuları Gör</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const select = document.getElementById('examTypeSelect');
+            const label = document.getElementById('examNameLabel');
+            
+            // Load saved exam type
+            const savedExam = localStorage.getItem('dopamind_exam_type');
+            if(savedExam) {
+                select.value = savedExam;
+                label.textContent = select.options[select.selectedIndex].text;
+            }
+
+            select.addEventListener('change', (e) => {
+                const text = e.target.options[e.target.selectedIndex].text;
+                label.textContent = text;
+                localStorage.setItem('dopamind_exam_type', e.target.value);
+            });
+            
+            // Random mock countdown for dummy purpose
+            setInterval(() => {
+                // Not a real countdown, just to make screen look alive if we wanted
+            }, 60000);
+        });
+    </script>
+}

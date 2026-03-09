@@ -1,0 +1,192 @@
+@model DarkNetCore.Models.StudyGroup
+@using DarkNetCore.Models
+
+@{
+    ViewData["Title"] = Model.Name + " Grubu";
+    var notes = ViewBag.Notes as IEnumerable<GroupNote>;
+    var messages = ViewBag.Messages as IEnumerable<GroupChatMessage>;
+}
+
+@section Styles {
+    <style>
+        .chat-container {
+            height: 60vh;
+            overflow-y: auto;
+            background-color: #e5ddd5; /* Typical WhatsApp BG */
+            background-image: url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png');
+            padding: 1rem;
+            border-radius: 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        
+        .chat-bubble {
+            max-width: 75%;
+            padding: 8px 12px;
+            border-radius: 8px;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+            font-size: 0.95rem;
+            position: relative;
+            line-height: 1.4;
+        }
+
+        .chat-bubble.ai {
+            background-color: #ffffff;
+            align-self: flex-start;
+            border-top-left-radius: 0;
+        }
+
+        .chat-bubble.user {
+            background-color: #dcf8c6; /* WhatsApp light green */
+            align-self: flex-end;
+            border-top-right-radius: 0;
+        }
+
+        .chat-bubble .sender {
+            font-size: 0.75rem;
+            font-weight: bold;
+            color: #075e54;
+            margin-bottom: 2px;
+        }
+
+        .chat-bubble.ai .sender {
+            color: #2b5278; /* Different color for AI */
+        }
+
+        .chat-bubble .time {
+            font-size: 0.65rem;
+            color: #999;
+            text-align: right;
+            margin-top: 4px;
+        }
+
+        .note-card {
+            border-left: 4px solid #0d6efd;
+            transition: transform 0.2s;
+        }
+        .note-card:hover {
+            transform: scale(1.02);
+        }
+    </style>
+}
+
+<div class="container-fluid p-4">
+    <!-- Group Header -->
+    <div class="glass-panel p-4 mb-4 d-flex justify-content-between align-items-center">
+        <div>
+            <h3 class="fw-bold mb-1"><i data-lucide="users" class="me-2 text-primary"></i>@Model.Name</h3>
+            <p class="text-muted mb-0">Takım Koçu (AI) ve Grup Üyeleri Burada!</p>
+        </div>
+        <div class="text-end d-flex align-items-center gap-3">
+            <div class="bg-light px-3 py-2 rounded border">
+                <small class="text-muted d-block text-uppercase" style="font-size: 0.7rem;">Grup Katılım Kodu</small>
+                <span class="fw-bold text-dark fs-5 font-monospace">@Model.JoinCode</span>
+            </div>
+            <form asp-action="LeaveGroup" method="post" onsubmit="return confirm('Gruptan ayrılmak istediğinize emin misiniz?');">
+                <button type="submit" class="btn btn-outline-danger btn-sm"><i data-lucide="log-out" class="me-1" size="16"></i> Ayrıl</button>
+            </form>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <!-- Left: Shared Notes -->
+        <div class="col-lg-4">
+            <div class="glass-panel p-4 h-100 d-flex flex-column">
+                <h5 class="fw-bold mb-3 d-flex align-items-center">
+                    <i data-lucide="clipboard-list" class="me-2 text-warning"></i> Ortak Notlar
+                </h5>
+                
+                <div class="input-group mb-3">
+                    <input type="text" id="newNoteInput" class="form-control" placeholder="Gruba not bırak...">
+                    <button class="btn btn-primary" id="addNoteBtn"><i data-lucide="plus" size="18"></i></button>
+                </div>
+
+                <div id="notesList" class="flex-grow-1 overflow-auto pe-2 d-flex flex-column gap-2" style="max-height: 55vh;">
+                    @if (notes != null && notes.Any())
+                    {
+                        @foreach(var note in notes)
+                        {
+                            <div class="card note-card bg-light border-0" id="note-@note.Id">
+                                <div class="card-body p-3">
+                                    <div class="d-flex justify-content-between align-items-start mb-2">
+                                        <small class="fw-bold text-primary">@note.User?.Username</small>
+                                        <button class="btn btn-link text-danger p-0 delete-note-btn" data-id="@note.Id">
+                                            <i data-lucide="trash" size="14"></i>
+                                        </button>
+                                    </div>
+                                    <p class="mb-1 text-dark" style="font-size: 0.9rem;">@note.Content</p>
+                                    <small class="text-muted" style="font-size: 0.7rem;">@note.CreatedAt.ToString("g")</small>
+                                </div>
+                            </div>
+                        }
+                    }
+                    else
+                    {
+                        <div class="text-center text-muted mt-4" id="emptyNotesMsg">
+                            <i data-lucide="inbox" size="32" class="mb-2 opacity-50"></i>
+                            <br><small>Henüz not eklenmedi.</small>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <!-- Right: Auto-Coached Group Chat -->
+        <div class="col-lg-8">
+            <div class="glass-panel p-3 h-100 d-flex flex-column">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="fw-bold mb-0 d-flex align-items-center">
+                        <i data-lucide="message-circle" class="me-2 text-success"></i> Grup Sohbeti & Koçluk
+                    </h5>
+                    <button class="btn btn-sm btn-outline-secondary" onclick="toggleGroupMute()" id="muteGroupBtn" title="Grup bildirimlerini aç / kapat">
+                        <i data-lucide="bell-off" size="18"></i> <span class="d-none d-sm-inline ms-1">Sustur</span>
+                    </button>
+                </div>
+                
+                <div class="chat-container mb-3 flex-grow-1" id="groupChatContainer">
+                    @if (messages != null && messages.Any())
+                    {
+                        @foreach (var msg in messages)
+                        {
+                            bool isAI = msg.SenderName == "AI Coach";
+                            <div class="chat-bubble @(isAI ? "ai" : "user") position-relative group-chat-msg" data-sender-id="@msg.UserId" data-sender-name="@msg.SenderName">
+                                <div class="sender d-flex justify-content-between align-items-center">
+                                    <span>
+                                        @if(isAI) { <i data-lucide="bot" size="12" class="me-1"></i> }
+                                        @msg.SenderName
+                                    </span>
+                                    @if (!isAI && msg.UserId != null && msg.SenderName != User.Identity?.Name)
+                                    {
+                                        <button class="btn btn-link text-muted p-0 ms-2 mute-user-btn" style="line-height:1;" title="Bu kişiyi sustur" onclick="toggleUserMute('@msg.UserId', '@msg.SenderName')">
+                                            <i data-lucide="volume-x" size="12"></i>
+                                        </button>
+                                    }
+                                </div>
+                                <div class="text">@Html.Raw(msg.Message.Replace("\n", "<br>"))</div>
+                                <div class="time">@msg.SentAt.ToString("g")</div>
+                            </div>
+                        }
+                    }
+                    else
+                    {
+                        <div class="text-center w-100 text-muted mt-5 opacity-75">
+                            <div class="badge bg-white text-dark shadow-sm">AI Koçunuz burada! Çalışmalarınızı anlatın.</div>
+                        </div>
+                    }
+                </div>
+
+                <div class="input-group">
+                    <input type="text" id="chatInput" class="form-control form-control-lg" placeholder="Bir mesaj yazın..." style="border-radius: 20px 0 0 20px;">
+                    <button class="btn btn-success px-4" id="sendBtn" style="border-radius: 0 20px 20px 0;">
+                        <i data-lucide="send" size="20"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="~/js/group.js" asp-append-version="true"></script>
+}

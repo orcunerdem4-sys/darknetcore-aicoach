@@ -11,6 +11,7 @@
     <script src="https://unpkg.com/lucide@latest"></script> 
     <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.js"></script>
     <link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/main.min.css" rel="stylesheet">
+    <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css">
     <link rel="manifest" href="~/manifest.json">
     <link rel="apple-touch-icon" href="~/favicon.ico">
     <meta name="theme-color" content="#4b0082">
@@ -44,6 +45,9 @@
                 <a asp-controller="Dashboard" asp-action="Index" class="nav-link @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Dashboard" ? "active" : "")">
                     <i data-lucide="layout-dashboard" class="nav-icon"></i> Dashboard
                 </a>
+                <a asp-controller="Group" asp-action="Index" class="nav-link @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Group" ? "active" : "")">
+                    <i data-lucide="users" class="nav-icon"></i> Çalışma Grubu
+                </a>
                 @if (User.Identity.Name == "beytullah" || User.Identity.Name == "admin")
                 {
                 <a asp-controller="Admin" asp-action="Index" class="nav-link text-warning @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Admin" ? "active" : "")">
@@ -64,10 +68,7 @@
                     <a asp-controller="Account" asp-action="Register" class="btn btn-primary glow-effect">Sign Up</a>
                 }
             </div>
-            <!-- Hamburger button (shown only on mobile via CSS) -->
-            <button class="hamburger-btn" id="hamburgerBtn" aria-label="Menüyü aç">
-                <i data-lucide="menu" size="26"></i>
-            </button>
+            <!-- Hamburger button (removed for bottom nav) -->
         </header>
         <main role="main" class="main-content">
             @RenderBody()
@@ -79,40 +80,49 @@
         </footer>
     </div>
 
-    <!-- Mobile Navigation Panel -->
-    <div class="mobile-nav-overlay" id="mobileNavOverlay"></div>
-    <div class="mobile-nav-panel" id="mobileNavPanel">
-        <button class="mobile-nav-close" id="mobileNavClose" aria-label="Kapat">&times;</button>
-        <div class="mobile-nav-logo">
-            <i data-lucide="brain" size="22"></i> Dopamind
-        </div>
-        <a href="/" class="nav-link"><i data-lucide="home" class="nav-icon me-2"></i> Ana Sayfa</a>
-        @if (User.Identity != null && User.Identity.IsAuthenticated)
-        {
-        <a href="/Dashboard" class="nav-link"><i data-lucide="layout-dashboard" class="nav-icon me-2"></i> Dashboard</a>
-        <a href="/Dashboard/Chat" class="nav-link"><i data-lucide="message-circle" class="nav-icon me-2"></i> AI Chat</a>
-        <a href="/Dashboard/Files" class="nav-link"><i data-lucide="folder-open" class="nav-icon me-2"></i> Dosyalar</a>
-        @if (User.Identity.Name == "beytullah" || User.Identity.Name == "admin")
-        {
-            <a asp-controller="Admin" asp-action="Index" class="nav-link text-warning"><i data-lucide="shield" class="nav-icon me-2"></i> Geliştirici Paneli</a>
-        }
-        }
-        <div style="margin-top: auto; border-top: 1px solid var(--border-color); padding-top: 1rem;">
-            @if (User.Identity != null && User.Identity.IsAuthenticated)
-            {
-                <span class="fw-bold text-dark d-block mb-2">@User.Identity.Name</span>
-                <a asp-controller="Account" asp-action="Logout" class="btn btn-outline-danger w-100">Çıkış Yap</a>
-            }
-            else
-            {
-                <a asp-controller="Account" asp-action="Login" class="btn btn-outline-primary w-100 mb-2">Giriş Yap</a>
-                <a asp-controller="Account" asp-action="Register" class="btn btn-primary w-100">Kayıt Ol</a>
-            }
-        </div>
-    </div>
+    <!-- Removed Mobile Navigation Panel (Replaced with Bottom Nav) -->
 
     @if (User.Identity != null && User.Identity.IsAuthenticated)
     {
+        var userIdString = User.Claims.FirstOrDefault(c => c.Type == System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? "Bilinmiyor";
+
+        <!-- Settings Offcanvas -->
+        <div class="offcanvas offcanvas-end shadow" tabindex="-1" id="settingsOffcanvas" aria-labelledby="settingsOffcanvasLabel" style="width: 350px;">
+            <div class="offcanvas-header bg-dark text-white border-bottom border-secondary">
+                <h5 class="offcanvas-title d-flex align-items-center fw-bold" id="settingsOffcanvasLabel">
+                    <i data-lucide="user" class="me-2"></i> Hesap Ayarları
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+            </div>
+            <div class="offcanvas-body d-flex flex-column" style="background-color: #f8fafc;">
+                <div class="text-center mb-4 mt-2">
+                    <div class="bg-primary text-white d-inline-flex align-items-center justify-content-center rounded-circle mb-2 shadow" style="width: 64px; height: 64px; font-size: 24px; font-weight: bold;">
+                        @(User.Identity.Name?.Substring(0,1).ToUpper() ?? "U")
+                    </div>
+                    <h5 class="fw-bold text-dark mb-0">@User.Identity.Name</h5>
+                    <p class="text-muted small mb-0">Öğrenci Hesabı</p>
+                </div>
+
+                <div class="card border-0 shadow-sm mb-4">
+                    <div class="card-body p-3">
+                        <label class="form-label text-secondary small fw-bold mb-1"><i data-lucide="hash" size="14" class="me-1"></i>Senin Benzersiz Kimliğin (ID)</label>
+                        <div class="d-flex align-items-center bg-light border rounded p-2">
+                            <span class="text-dark font-monospace small text-truncate flex-grow-1" id="userUniqueId">@userIdString</span>
+                            <button class="btn btn-sm btn-outline-secondary ms-2 p-1 border-0" onclick="navigator.clipboard.writeText('@userIdString'); window.showToast('ID kopyalandı!')" title="ID Kopyala">
+                                <i data-lucide="copy" size="16"></i>
+                            </button>
+                        </div>
+                        <small class="text-muted" style="font-size: 0.75rem; display: block; margin-top: 6px;">Gruplara eklenmek veya sessize alınmak için bu ID'yi arkadaşlarına gönderebilirsin.</small>
+                    </div>
+                </div>
+
+                <div class="mt-auto">
+                    <a asp-controller="Account" asp-action="Logout" class="btn btn-danger w-100 fw-bold d-flex align-items-center justify-content-center">
+                        <i data-lucide="log-out" size="18" class="me-2"></i> Çıkış Yap
+                    </a>
+                </div>
+            </div>
+        </div>
         <!-- Floating Feedback/Notes Button -->
         <button class="btn btn-primary shadow-lg d-flex align-items-center justify-content-center fw-bold" 
                 type="button" data-bs-toggle="offcanvas" data-bs-target="#feedbackOffcanvas" aria-controls="feedbackOffcanvas"
@@ -163,7 +173,7 @@
     </div>
 
     <!-- PWA Install Button (shown when installable on Chrome/Edge/Android) -->
-    <button id="pwaInstallBtn" style="display:none; position:fixed; bottom:30px; right:30px; z-index:1060;
+    <button id="pwaInstallBtn" style="display:none; position:fixed; bottom:90px; right:30px; z-index:1060;
         background:linear-gradient(135deg,#059669,#10b981); color:white; border:none;
         border-radius:25px; padding:0 20px; height:50px; box-shadow:0 4px 20px rgba(5,150,105,0.4);
         font-weight:600; font-size:0.92rem; cursor:pointer; align-items:center; gap:8px;
@@ -172,11 +182,61 @@
         <span>Uygulamayı Yükle</span>
     </button>
 
+    <!-- Mobile Bottom Navigation Bar -->
+    @if (User.Identity != null && User.Identity.IsAuthenticated)
+    {
+        <nav class="mobile-bottom-nav d-md-none">
+            <a href="/Dashboard" class="bottom-nav-item @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Dashboard" && ViewContext.RouteData.Values["Action"]?.ToString() == "Index" ? "active" : "")">
+                <i data-lucide="calendar"></i>
+                <span>Takvim</span>
+            </a>
+            <a href="/Dashboard/Files" class="bottom-nav-item @(ViewContext.RouteData.Values["Action"]?.ToString() == "Files" ? "active" : "")">
+                <i data-lucide="folder-open"></i>
+                <span>Belgeler</span>
+            </a>
+            <a href="/Dashboard/Chat" class="bottom-nav-item ai-coach-btn @(ViewContext.RouteData.Values["Action"]?.ToString() == "Chat" ? "active" : "")">
+                <div class="ai-coach-icon">
+                    <i data-lucide="sparkles"></i>
+                </div>
+                <span>AI Coach</span>
+            </a>
+            <a id="navExamBtn" href="/Dashboard/Exam" class="bottom-nav-item d-none @(ViewContext.RouteData.Values["Action"]?.ToString() == "Exam" ? "active" : "")">
+                <i data-lucide="graduation-cap"></i>
+                <span>Sınav</span>
+            </a>
+            <div class="bottom-nav-item" data-bs-toggle="offcanvas" data-bs-target="#settingsOffcanvas">
+                <i data-lucide="settings"></i>
+                <span>Ayarlar</span>
+            </div>
+        </nav>
+    }
+
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/toastify-js"></script>
     <script src="~/js/site.js" asp-append-version="true"></script>
     <script>
         lucide.createIcons();
+        
+        // Global Toast Notification Helper
+        window.showToast = function(message, type = "success") {
+            const bgColor = type === "success" ? "linear-gradient(to right, #00b09b, #96c93d)" :
+                            type === "error" ? "linear-gradient(to right, #ff5f6d, #ffc371)" :
+                            "linear-gradient(to right, #348F50, #56B4D3)";
+            Toastify({
+                text: message,
+                duration: 3000,
+                close: true,
+                gravity: "top", 
+                position: "center", 
+                style: {
+                    background: bgColor,
+                    borderRadius: "8px",
+                    boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
+                    fontWeight: "600"
+                }
+            }).showToast();
+        }
 
         // Feedback Panel Logic
         const offcanvasElement = document.getElementById('feedbackOffcanvas');
@@ -234,34 +294,23 @@
                 if(res.ok) {
                     input.value = '';
                     loadFeedbacks();
+                    window.showToast("Not başarıyla eklendi!");
                 } else {
-                    alert('Kaydetme başarısız oldu.');
+                    window.showToast("Kaydetme başarısız oldu.", "error");
                 }
             } catch (err) {
-                alert('Sunucuya ulaşılamadı. Lütfen bağlantınızı kontrol edin.');
+                window.showToast("Sunucuya ulaşılamadı. Lütfen bağlantınızı kontrol edin.", "error");
             }
         }
 
-        // ── Hamburger Menu ──────────────────────────────────────
-        const hamburgerBtn = document.getElementById('hamburgerBtn');
-        const mobileNavPanel = document.getElementById('mobileNavPanel');
-        const mobileNavOverlay = document.getElementById('mobileNavOverlay');
-        const mobileNavClose = document.getElementById('mobileNavClose');
-
-        function openMobileNav() {
-            mobileNavPanel.classList.add('open');
-            mobileNavOverlay.classList.add('open');
-            document.body.style.overflow = 'hidden';
-        }
-        function closeMobileNav() {
-            mobileNavPanel.classList.remove('open');
-            mobileNavOverlay.classList.remove('open');
-            document.body.style.overflow = '';
-        }
-
-        if (hamburgerBtn) hamburgerBtn.addEventListener('click', openMobileNav);
-        if (mobileNavClose) mobileNavClose.addEventListener('click', closeMobileNav);
-        if (mobileNavOverlay) mobileNavOverlay.addEventListener('click', closeMobileNav);
+        // Exam Mode checking for mobile nav
+        document.addEventListener('DOMContentLoaded', () => {
+            const isExamMode = localStorage.getItem('dopamind_exam_mode') === 'true';
+            const navExamBtn = document.getElementById('navExamBtn');
+            if(navExamBtn && isExamMode) {
+                navExamBtn.classList.remove('d-none');
+            }
+        });
     </script>
     @await RenderSectionAsync("Scripts", required: false)
     
@@ -310,6 +359,62 @@
         const iosBanner = document.getElementById('iosPwaBanner');
         if (isIos && !isInStandaloneMode && !localStorage.getItem('iosBannerShown') && iosBanner) {
             setTimeout(() => { iosBanner.style.display = 'flex'; lucide.createIcons(); }, 3000);
+        }
+
+        // ── Push Notifications ──
+        async function subscribeToPushNotifications(registration) {
+            try {
+                const response = await fetch('/Notification/GetVapidPublicKey');
+                if(!response.ok) return;
+                const { publicKey } = await response.json();
+                
+                const convertedVapidKey = urlBase64ToUint8Array(publicKey);
+
+                const subscription = await registration.pushManager.subscribe({
+                    userVisibleOnly: true,
+                    applicationServerKey: convertedVapidKey
+                });
+
+                // Send to backend
+                await fetch('/Notification/Subscribe', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(subscription)
+                });
+                console.log('Push notification subscription successful.');
+            } catch (err) {
+                console.error('Failed to subscribe to push notifications:', err);
+            }
+        }
+
+        function urlBase64ToUint8Array(base64String) {
+            const padding = '='.repeat((4 - base64String.length % 4) % 4);
+            const base64 = (base64String + padding)
+                .replace(/\-/g, '+')
+                .replace(/_/g, '/');
+
+            const rawData = window.atob(base64);
+            const outputArray = new Uint8Array(rawData.length);
+
+            for (let i = 0; i < rawData.length; ++i) {
+                outputArray[i] = rawData.charCodeAt(i);
+            }
+            return outputArray;
+        }
+
+        if ('serviceWorker' in navigator && 'PushManager' in window) {
+            navigator.serviceWorker.ready.then(async (registration) => {
+                if (Notification.permission === 'granted') {
+                    // Always try to re-subscribe silently on load just to ensure DB has it
+                    subscribeToPushNotifications(registration);
+                } else if (Notification.permission !== 'denied') {
+                    // Alternatively, could bind this to a button instead of prompting immediately
+                    const permission = await Notification.requestPermission();
+                    if (permission === 'granted') {
+                        subscribeToPushNotifications(registration);
+                    }
+                }
+            });
         }
     </script>
 </body>
