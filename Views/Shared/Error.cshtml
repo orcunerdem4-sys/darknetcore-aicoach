@@ -23,3 +23,13 @@
     For local debugging, enable the <strong>Development</strong> environment by setting the <strong>ASPNETCORE_ENVIRONMENT</strong> environment variable to <strong>Development</strong>
     and restarting the app.
 </p>
+
+@if (ViewData["ExceptionMessage"] != null)
+{
+    <div class="alert alert-danger mt-4">
+        <h4>System Exception Details:</h4>
+        <p><strong>Message:</strong> @ViewData["ExceptionMessage"]</p>
+        <hr>
+        <pre style="white-space: pre-wrap; font-size: 0.8rem;">@ViewData["ExceptionStackTrace"]</pre>
+    </div>
+}

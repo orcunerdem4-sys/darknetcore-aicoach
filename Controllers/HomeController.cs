@@ -26,6 +26,10 @@ public class HomeController : Controller
     [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
     public IActionResult Error()
     {
+        var exceptionHandlerPathFeature = HttpContext.Features.Get<Microsoft.AspNetCore.Diagnostics.IExceptionHandlerPathFeature>();
+        ViewData["ExceptionMessage"] = exceptionHandlerPathFeature?.Error?.Message;
+        ViewData["ExceptionStackTrace"] = exceptionHandlerPathFeature?.Error?.StackTrace;
+        
         return View(new ErrorViewModel { RequestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier });
     }
 }
