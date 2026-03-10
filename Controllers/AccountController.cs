@@ -55,6 +55,7 @@ public class AccountController : Controller
                 new ClaimsPrincipal(claimsIdentity),
                 new AuthenticationProperties { IsPersistent = true, ExpiresUtc = DateTimeOffset.UtcNow.AddDays(30) });
 
+            TempData["SuccessMessage"] = "Başarıyla giriş yapıldı!";
             return RedirectToLocal(returnUrl);
         }
 
@@ -68,7 +69,7 @@ public class AccountController : Controller
         {
             return Redirect(returnUrl);
         }
-        return RedirectToAction("Index", "Dashboard");
+        return RedirectToAction("Chat", "Dashboard");
     }
 
     [HttpGet]
