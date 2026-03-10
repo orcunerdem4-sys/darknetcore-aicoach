@@ -63,10 +63,10 @@ body.light-theme {
     display: flex;
     align-items: center;
     padding: 0.5rem 1rem;
-    background: #ecfdf5;
-    border: 1px solid rgba(16, 185, 129, 0.2);
+    background: var(--bg-card);
+    border: 1px solid var(--border-dim);
     border-radius: 50px;
-    box-shadow: 0 2px 10px rgba(5, 150, 105, 0.05);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
     transition: all 0.3s ease;
 }
 
@@ -112,11 +112,11 @@ body.light-theme {
     align-items: center;
     justify-content: space-between;
     padding: 0.5rem 1rem;
-    background: #f8fafc;
-    border: 1px dashed #cbd5e1;
+    background: var(--bg-input);
+    border: 1px dashed var(--border-dim);
     border-radius: 8px;
     transition: all 0.3s ease;
-    color: var(--text-secondary);
+    color: var(--text-muted);
 }
 
 .file-upload-wrapper:hover .file-upload-trigger {
@@ -133,14 +133,14 @@ body.light-theme {
 
 /* Light Theme Form Inputs */
 .custom-input {
-    background-color: #fff !important;
-    border: 1px solid var(--border-color);
-    color: var(--text-primary) !important;
+    background-color: var(--bg-input) !important;
+    border: 1px solid var(--border-dim);
+    color: var(--text-main) !important;
     transition: all 0.2s;
 }
 
 .custom-input:focus {
-    background-color: #fff !important;
+    background-color: var(--bg-input) !important;
     border-color: var(--accent-primary);
     box-shadow: 0 0 0 0.25rem rgba(5, 150, 105, 0.15);
 }

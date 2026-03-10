@@ -120,19 +120,8 @@ public class AccountController : Controller
         _context.Users.Add(newUser);
         await _context.SaveChangesAsync();
 
-        var claims = new List<Claim>
-        {
-            new Claim(ClaimTypes.Name, newUser.Username),
-            new Claim(ClaimTypes.NameIdentifier, newUser.Id)
-        };
-
-        var claimsIdentity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
-        await HttpContext.SignInAsync(
-            CookieAuthenticationDefaults.AuthenticationScheme,
-            new ClaimsPrincipal(claimsIdentity),
-            new AuthenticationProperties { IsPersistent = true, ExpiresUtc = DateTimeOffset.UtcNow.AddDays(30) });
-
-        return RedirectToLocal(returnUrl);
+        TempData["SuccessMessage"] = "Kayıt başarılı! Şimdi giriş yapabilirsiniz.";
+        return RedirectToAction("Login", new { returnUrl });
     }
 
     public async Task<IActionResult> Logout()

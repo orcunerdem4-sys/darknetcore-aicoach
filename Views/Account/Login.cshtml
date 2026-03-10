@@ -4,7 +4,7 @@
 }
 
 <style>
-    body { background: linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 100%); }
+    body { background-color: var(--bg-body) !important; }
     .login-wrapper {
         min-height: calc(100vh - 140px);
         display: flex;
@@ -13,13 +13,13 @@
         padding: 2rem 1rem;
     }
     .login-card {
-        background: #ffffff;
+        background: var(--bg-card);
         border-radius: 24px;
-        box-shadow: 0 20px 60px rgba(5, 150, 105, 0.12), 0 4px 20px rgba(0,0,0,0.06);
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
         padding: 2.5rem;
         width: 100%;
         max-width: 420px;
-        border: 1px solid #d1fae5;
+        border: 1px solid var(--border-dim);
     }
     .login-logo {
         display: flex;
@@ -35,18 +35,22 @@
         display: flex; align-items: center; justify-content: center;
         color: white;
     }
-    .login-title { font-size: 1.6rem; font-weight: 700; color: #064e3b; text-align: center; }
-    .login-sub { color: #6b7280; font-size: 0.92rem; text-align: center; margin-bottom: 1.8rem; }
-    .form-label { font-weight: 600; color: #374151; font-size: 0.9rem; }
+    .login-title { font-size: 1.6rem; font-weight: 700; color: var(--text-main); text-align: center; }
+    .login-sub { color: var(--text-muted); font-size: 0.92rem; text-align: center; margin-bottom: 1.8rem; }
+    .form-label { font-weight: 600; color: var(--text-main); font-size: 0.9rem; }
     .form-control {
-        border: 1.5px solid #e5e7eb;
+        background-color: var(--bg-input);
+        border: 1.5px solid var(--border-dim);
         border-radius: 12px;
         padding: 0.75rem 1rem;
         font-size: 0.95rem;
+        color: var(--text-main);
         transition: border-color 0.2s, box-shadow 0.2s;
     }
     .form-control:focus {
+        background-color: var(--bg-input);
         border-color: #059669;
+        color: var(--text-main);
         box-shadow: 0 0 0 3px rgba(5,150,105,0.12);
     }
     .btn-login {
@@ -63,31 +67,31 @@
     }
     .btn-login:hover { transform: translateY(-1px); box-shadow: 0 6px 18px rgba(5,150,105,0.4); color: white; }
     .divider { display: flex; align-items: center; gap: 12px; margin: 1.2rem 0; }
-    .divider-line { flex: 1; height: 1px; background: #e5e7eb; }
-    .divider-text { color: #9ca3af; font-size: 0.82rem; white-space: nowrap; }
+    .divider-line { flex: 1; height: 1px; background: var(--border-dim); }
+    .divider-text { color: var(--text-muted); font-size: 0.82rem; white-space: nowrap; }
     .btn-social {
         display: flex; align-items: center; justify-content: center; gap: 10px;
         width: 100%; padding: 0.75rem;
-        border-radius: 12px; border: 1.5px solid #e5e7eb;
-        background: #fff; color: #374151;
+        border-radius: 12px; border: 1.5px solid var(--border-dim);
+        background: var(--bg-card); color: var(--text-main);
         font-weight: 500; font-size: 0.92rem;
         transition: all 0.2s; cursor: pointer;
         margin-bottom: 0.75rem;
         text-decoration: none;
     }
-    .btn-social:hover { border-color: #d1d5db; background: #f9fafb; color: #111827; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+    .btn-social:hover { border-color: #d1d5db; background: var(--bg-input); color: var(--text-main); box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
     .btn-social svg { width: 20px; height: 20px; flex-shrink: 0; }
-    .signup-link { text-align: center; margin-top: 1.5rem; color: #6b7280; font-size: 0.9rem; }
+    .signup-link { text-align: center; margin-top: 1.5rem; color: var(--text-muted); font-size: 0.9rem; }
     .signup-link a { color: #059669; font-weight: 600; text-decoration: none; }
     .signup-link a:hover { text-decoration: underline; }
     .remember-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.2rem; }
-    .remember-row label { font-size: 0.88rem; color: #6b7280; cursor: pointer; }
+    .remember-row label { font-size: 0.88rem; color: var(--text-muted); cursor: pointer; }
     .password-wrapper { position: relative; }
     .password-wrapper .form-control { padding-right: 3rem; }
     .password-toggle {
         position: absolute; right: 14px; top: 50%; transform: translateY(-50%);
         background: none; border: none; padding: 0; cursor: pointer;
-        color: #9ca3af; transition: color 0.2s; line-height: 1;
+        color: var(--text-muted); transition: color 0.2s; line-height: 1;
     }
     .password-toggle:hover { color: #059669; }
 </style>
@@ -103,12 +107,21 @@
         <h1 class="login-title">Hoş Geldin 👋</h1>
         <p class="login-sub">Çalışma alanına giriş yap</p>
 
-        @if (!string.IsNullOrEmpty(ViewBag.Error))
-        {
-            <div class="alert alert-danger rounded-3 py-2 px-3 mb-3" style="font-size:0.9rem;" role="alert">
-                <i data-lucide="alert-circle" style="width:16px;height:16px;margin-right:6px;"></i>@ViewBag.Error
-            </div>
-        }
+@if (TempData["SuccessMessage"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show rounded-3 py-2 px-3 mb-3" style="font-size:0.9rem;" role="alert">
+        <i data-lucide="check-circle" style="width:16px;height:16px;margin-right:6px;"></i>@TempData["SuccessMessage"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close" style="padding: 0.75rem;"></button>
+    </div>
+}
+
+@if (!string.IsNullOrEmpty(ViewBag.Error))
+{
+    <div class="alert alert-danger alert-dismissible fade show rounded-3 py-2 px-3 mb-3" style="font-size:0.9rem;" role="alert">
+        <i data-lucide="alert-circle" style="width:16px;height:16px;margin-right:6px;"></i>@ViewBag.Error
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close" style="padding: 0.75rem;"></button>
+    </div>
+}
 
         <form asp-controller="Account" asp-action="Login" asp-route-returnUrl="@ViewData["ReturnUrl"]" method="post">
             <div class="mb-3">
