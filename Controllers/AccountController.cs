@@ -18,28 +18,29 @@ public class AccountController : Controller
     }
 
     [HttpGet]
-    public IActionResult Login()
+    public IActionResult Login(string? returnUrl = null)
     {
+        ViewData["ReturnUrl"] = returnUrl;
         if (User.Identity != null && User.Identity.IsAuthenticated)
         {
-            return RedirectToAction("Index", "Dashboard");
+            return RedirectToLocal(returnUrl);
         }
         return View();
     }
 
     [HttpPost]
-    public async Task<IActionResult> Login(string username, string password)
+    public async Task<IActionResult> Login(string username, string password, string? returnUrl = null)
     {
+        ViewData["ReturnUrl"] = returnUrl;
         if (string.IsNullOrEmpty(username) || string.IsNullOrEmpty(password))
         {
             ViewBag.Error = "Kullanıcı adı ve parola zorunludur.";
             return View();
         }
 
-        // Use standard EF Core string equality in SQLite
         var user = await _context.Users.FirstOrDefaultAsync(u => u.Username == username);
 
-        if (user != null && user.PasswordHash == password) // TODO: Şifreler hash'lenmeli!
+        if (user != null && user.PasswordHash == password)
         {
             var claims = new List<Claim>
             {
@@ -54,26 +55,37 @@ public class AccountController : Controller
                 new ClaimsPrincipal(claimsIdentity),
                 new AuthenticationProperties { IsPersistent = true, ExpiresUtc = DateTimeOffset.UtcNow.AddDays(30) });
 
-            return RedirectToAction("Index", "Dashboard");
+            return RedirectToLocal(returnUrl);
         }
 
         ViewBag.Error = "Geçersiz kullanıcı adı veya parola.";
         return View();
     }
 
-    [HttpGet]
-    public IActionResult Register()
+    private IActionResult RedirectToLocal(string? returnUrl)
     {
+        if (!string.IsNullOrEmpty(returnUrl) && Url.IsLocalUrl(returnUrl))
+        {
+            return Redirect(returnUrl);
+        }
+        return RedirectToAction("Index", "Dashboard");
+    }
+
+    [HttpGet]
+    public IActionResult Register(string? returnUrl = null)
+    {
+        ViewData["ReturnUrl"] = returnUrl;
         if (User.Identity != null && User.Identity.IsAuthenticated)
         {
-            return RedirectToAction("Index", "Dashboard");
+            return RedirectToLocal(returnUrl);
         }
         return View();
     }
 
     [HttpPost]
-    public async Task<IActionResult> Register(string username, string email, string password)
+    public async Task<IActionResult> Register(string username, string email, string password, string? returnUrl = null)
     {
+        ViewData["ReturnUrl"] = returnUrl;
         if (string.IsNullOrEmpty(username) || string.IsNullOrEmpty(email) || string.IsNullOrEmpty(password))
         {
             ViewBag.Error = "Tüm alanlar zorunludur.";
@@ -101,14 +113,13 @@ public class AccountController : Controller
             Id = Guid.NewGuid().ToString(),
             Username = username,
             Email = email,
-            PasswordHash = password, // TODO: Hash logic
+            PasswordHash = password,
             CreatedAt = DateTime.Now
         };
 
         _context.Users.Add(newUser);
         await _context.SaveChangesAsync();
 
-        // Otomatik giriş yap
         var claims = new List<Claim>
         {
             new Claim(ClaimTypes.Name, newUser.Username),
@@ -121,7 +132,7 @@ public class AccountController : Controller
             new ClaimsPrincipal(claimsIdentity),
             new AuthenticationProperties { IsPersistent = true, ExpiresUtc = DateTimeOffset.UtcNow.AddDays(30) });
 
-        return RedirectToAction("Index", "Dashboard");
+        return RedirectToLocal(returnUrl);
     }
 
     public async Task<IActionResult> Logout()

@@ -86,7 +86,7 @@
             </div>
         }
 
-        <form asp-controller="Account" asp-action="Register" method="post">
+        <form asp-controller="Account" asp-action="Register" asp-route-returnUrl="@ViewData["ReturnUrl"]" method="post">
             <div class="mb-3">
                 <label for="username" class="form-label">Kullanıcı Adı</label>
                 <input type="text" class="form-control" id="username" name="username"
