@@ -80,9 +80,19 @@ public class AccountController : Controller
             return View();
         }
 
-        if (await _context.Users.AnyAsync(u => u.Username == username || u.Email == email))
+        if (username.Equals("admin", StringComparison.OrdinalIgnoreCase))
         {
-            ViewBag.Error = "Bu kullanıcı adı veya e-posta zaten kullanılıyor.";
+            ViewBag.Error = "Bu kullanıcı adı sistem tarafından rezerve edilmiştir.";
+            return View();
+        }
+
+        if (await _context.Users.AnyAsync(u => u.Username.ToLower() == username.ToLower() || u.Email.ToLower() == email.ToLower()))
+        {
+            var userExists = await _context.Users.AnyAsync(u => u.Username.ToLower() == username.ToLower());
+            if (userExists)
+                ViewBag.Error = "Bu kullanıcı adı zaten kullanılıyor.";
+            else
+                ViewBag.Error = "Bu e-posta adresi ile zaten kayıt olunmuş.";
             return View();
         }
 

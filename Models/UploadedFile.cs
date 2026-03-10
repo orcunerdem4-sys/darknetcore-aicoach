@@ -37,6 +37,7 @@ public enum ResourceType
 {
     Document,
     Image,
+    Audio,
     Link,
     Video,
     Folder

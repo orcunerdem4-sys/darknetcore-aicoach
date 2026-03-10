@@ -1,5 +1,6 @@
 using DarkNetCore.Data;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.DataProtection;
 
 // Allow Local DateTime to be written to PostgreSQL (for legacy data compatibility)
 AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
@@ -14,6 +15,12 @@ builder.Services.AddScoped<DatabaseService>();
 builder.Services.AddHttpClient<DarkNetCore.Services.GeminiService>();
 builder.Services.AddSingleton<DarkNetCore.Services.JsonDataService>();
 builder.Services.AddHttpContextAccessor();
+
+// Add Data Protection to persist keys across restarts so cookies remain valid
+var keysDirectory = Path.Combine(builder.Environment.ContentRootPath, "App_Data", "Keys");
+builder.Services.AddDataProtection()
+    .PersistKeysToFileSystem(new DirectoryInfo(keysDirectory))
+    .SetApplicationName("Dopamind");
 
 // Authentication & Session
 builder.Services.AddAuthentication(Microsoft.AspNetCore.Authentication.Cookies.CookieAuthenticationDefaults.AuthenticationScheme)

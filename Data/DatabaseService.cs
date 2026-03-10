@@ -243,6 +243,30 @@ public class DatabaseService
     }
 
     // -----------------------------------------
+    // Error Logging Operations
+    // -----------------------------------------
+    public async Task LogErrorAsync(string? message, string? stackTrace, string? path)
+    {
+        var errorLog = new ErrorLog
+        {
+            Id = Guid.NewGuid().ToString(),
+            Message = message,
+            StackTrace = stackTrace,
+            Path = path,
+            UserId = GetCurrentUserId(),
+            CreatedAt = DateTime.UtcNow
+        };
+        
+        _context.ErrorLogs.Add(errorLog);
+        await _context.SaveChangesAsync();
+    }
+
+    public async Task<List<ErrorLog>> GetErrorLogsAsync()
+    {
+        return await _context.ErrorLogs.OrderByDescending(e => e.CreatedAt).ToListAsync();
+    }
+
+    // -----------------------------------------
     // Admin Operations
     // -----------------------------------------
     public async Task<List<User>> GetAllUsersAsync()

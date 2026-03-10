@@ -17,20 +17,22 @@ public class GeminiService
         _httpClient = httpClient;
     }
 
-    public async Task<GeminiAnalysisResult?> AnalyzeFileMetadataAsync(string fileName, string fileType)
+    public async Task<GeminiAnalysisResult?> AnalyzeFileMetadataAsync(string fileName, string fileType, string? content = null)
     {
         if (string.IsNullOrEmpty(_apiKey)) return null;
 
-        var prompt = $@"Analyze this file based on its name and type for a study plan.
+        var contentPreview = string.IsNullOrEmpty(content) ? "" : $"\nFile Content Preview: {content.Substring(0, Math.Min(content.Length, 5000))}";
+
+        var prompt = $@"Analyze this file for a study plan.
 File Name: '{fileName}'
-Type: {fileType}
+Type: {fileType}{contentPreview}
 
 Return a JSON object with these fields:
-- topic: (string) The main academic subject (e.g. 'Physics', 'History').
+- topic: (string) The main academic subject (e.g. 'Physics', 'History', 'Programming', 'Language').
 - complexityScore: (int) 1-10 difficulty rating. 
-- wordCount: (int) Estimated word count.
+- wordCount: (int) Estimated word count (if applicable).
 - estimatedHours: (double) Time to study deeply.
-- summary: (string) A very short, strict 1-sentence summary of what this file likely contains.
+- summary: (string) A strict 1-sentence summary (e.g. 'Voice message from student' or 'Meeting recording').
 
 Example JSON: {{ ""topic"": ""Biology"", ""complexityScore"": 7, ""wordCount"": 5000, ""estimatedHours"": 2.5, ""summary"": ""Covers cellular respiration process."" }}";
 
@@ -65,8 +67,8 @@ Example JSON: {{ ""topic"": ""Biology"", ""complexityScore"": 7, ""wordCount"": 
         sb.AppendLine("- Her hafta tekrar eden dersleri gösterir. Dosyada 'Feb 9-13' gibi bir tarih görüyorsan bu yalnızca örnek haftadır.");
         sb.AppendLine("- 'Yarın Salı' diye sorulduğunda: dosyadaki SALI sütununa/satırına bak, tarihe değil GÜNE göre yanıtla.");
         sb.AppendLine("- Dosyada iki sütun yan yana varsa (Türkçe program | İngilizce program), kullanıcı İngilizce programı takip ediyor.");
-        sb.AppendLine("- EĞER sana verilen dosya özetinde (AnalysisSummary) saatler ve dersler varsa AYNEN kullan.");
-        sb.AppendLine("- EĞER sana dosya içeriği verilmemişse ('Synced from Drive' gibi kısa bir not varsa), uydurma. Kullanıcıya 'Google Drive dosyalarının içeriğini göremiyorum, okuyabilmem için bilgisayardan yüklemen gerekiyor' de.");
+        sb.AppendLine("- EĞER sana verilen dosya özetinde (AnalysisSummary) saatler veya ders içerikleri varsa bunlara dayanarak analiz yap.");
+        sb.AppendLine("- EĞER 'Synced from Drive' dışında hiçbir içerik yoksa veya 'Hata' mesajı görüyorsan, kullanıcıya içeriği okuyamadığını dürüstçe söyle.");
 
         if (lessons != null && lessons.Any())
         {
@@ -110,18 +112,15 @@ Example JSON: {{ ""topic"": ""Biology"", ""complexityScore"": 7, ""wordCount"": 
         }
 
         sb.AppendLine("Yanıtlarında markdown kullan. Kısa ve net ol.");
-        sb.AppendLine("Kullanıcı dosyalarını sorarsa yukarıdaki listeden cevap ver. Eğer dosyanın içeriği verilmemişse asla uydurma, dürüstçe 'göremiyorum' de.");
+        sb.AppendLine("Kullanıcı dosyalarını sorarsa yukarıdaki listedeki 'Özet' (AnalysisSummary) kısmına bakarak cevap ver. İçerik verilmişse o dosyayı 'okuyabildiğini' varsay ve konuyu derinleştir.");
         sb.AppendLine();
-        sb.AppendLine("🛠️ GÖREV VE TAKVİM KOMUTLARI:");
-        sb.AppendLine("Eğer kullanıcı takvimine görev EKLENMESİNİ isterse:");
-        sb.AppendLine("- Her görev için AYRI bir ```json bloğu yaz (tek blokta birden fazla görev OLMAZ)");
-        sb.AppendLine("- Birden fazla ders varsa her biri için ayrı blok yaz");
-        sb.AppendLine("- Ekleme: ```json\n{ \"command\": \"add_task\", \"title\": \"Ders Adı\", \"date\": \"2026-03-03T09:00:00\", \"durationHours\": 1.0, \"priority\": \"Medium\", \"difficultyScore\": 6, \"difficultyReason\": \"Anatomi ezberi yoğun olduğu için bölünmeden 2 saat çalışılmalı.\" }\n```");
-        sb.AppendLine("- difficultyScore: Dersin/ödevin analizine göre 1-10 arası bir zorluk - yoğunluk derecesi ver.");
-        sb.AppendLine("- difficultyReason: 1-2 cümleyle dersin/ödevin içeriğine göre neden bu zorlukta olduğunu, hangi konuların yorabileceğini açıkla (kullanıcı bunu bilgi baloncuğunda okuyacak).");
-        sb.AppendLine("- Silme: ```json\n{ \"command\": \"remove_task\", \"title\": \"Ders Adı\" }\n```");
-        sb.AppendLine("⚠️ YANIT KURALLARI: JSON bloklarını ekledikten sonra kullanıcıya SADECE 1-2 kısa cümle yaz. Uzun liste veya tekrar yazma.");
-        sb.AppendLine("Örnek iyi yanıt: 'Yarınki 6 dersin takvimine eklendi ✅'");
+        sb.AppendLine("🛠️ KOMUT KURALLARI (GÖREV EKLEME/SİLME):");
+        sb.AppendLine("Eğer takvime bir şey eklemen veya silmen gerekiyorsa:");
+        sb.AppendLine("1. MUTLAKA ```json ve ``` işaretlerini kullan. Bu işaretler olmadan komutların ÇALIŞMAZ.");
+        sb.AppendLine("2. Her görev için AYRI bir ```json bloğu yaz.");
+        sb.AppendLine("3. Örnek Ekleme: ```json\n{ \"command\": \"add_task\", \"title\": \"Matematik Ödevi\", \"date\": \"2026-03-11T14:00:00\", \"durationHours\": 2.0, \"priority\": \"High\", \"difficultyScore\": 7, \"difficultyReason\": \"Anatomi ezberi yoğun olduğu için bölünmeden 2 saat çalışılmalı.\" }\n```");
+        sb.AppendLine("4. Örnek Silme: ```json\n{ \"command\": \"remove_task\", \"title\": \"Matematik Ödevi\" }\n```");
+        sb.AppendLine("⚠️ ÖNEMLİ: JSON bloğunu ekledikten sonra kullanıcıya sadece 1-2 cümlelik nezaket dolu bir onay mesajı ver. JSON içeriğini mesajın içinde HAM METİN olarak asla tekrar etme.");
 
         var systemPrompt = sb.ToString();
 

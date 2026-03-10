@@ -1,6 +1,5 @@
-const CACHE_NAME = 'dopamind-v2';
+const CACHE_NAME = 'dopamind-v3';
 const urlsToCache = [
-    '/',
     '/css/site.css',
     '/js/dashboard.js',
     '/favicon.ico',

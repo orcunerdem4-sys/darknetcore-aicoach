@@ -43,3 +43,6 @@ darknetcore.db
 
 # Uploads directory
 wwwroot/uploads/
+
+# Data Protection Keys
+App_Data/

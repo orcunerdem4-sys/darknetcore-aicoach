@@ -15,7 +15,8 @@ public class HomeController : Controller
 
     public IActionResult Index()
     {
-        return View();
+        // Redirect directly to Dashboard Chat (main functional area)
+        return RedirectToAction("Chat", "Dashboard");
     }
 
     public IActionResult Privacy()
@@ -24,9 +25,19 @@ public class HomeController : Controller
     }
 
     [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
-    public IActionResult Error()
+    public async Task<IActionResult> Error([FromServices] DarkNetCore.Data.DatabaseService dataService)
     {
         var exceptionHandlerPathFeature = HttpContext.Features.Get<Microsoft.AspNetCore.Diagnostics.IExceptionHandlerPathFeature>();
+        
+        if (exceptionHandlerPathFeature?.Error != null)
+        {
+            await dataService.LogErrorAsync(
+                exceptionHandlerPathFeature.Error.Message,
+                exceptionHandlerPathFeature.Error.StackTrace,
+                exceptionHandlerPathFeature.Path
+            );
+        }
+
         ViewData["ExceptionMessage"] = exceptionHandlerPathFeature?.Error?.Message;
         ViewData["ExceptionStackTrace"] = exceptionHandlerPathFeature?.Error?.StackTrace;
         

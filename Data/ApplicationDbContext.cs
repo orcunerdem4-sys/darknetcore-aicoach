@@ -24,6 +24,7 @@ public class ApplicationDbContext : DbContext
     public DbSet<GroupNote> GroupNotes { get; set; }
     public DbSet<GroupChatMessage> GroupChatMessages { get; set; }
     public DbSet<MutedUser> MutedUsers { get; set; }
+    public DbSet<ErrorLog> ErrorLogs { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

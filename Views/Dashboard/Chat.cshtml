@@ -7,85 +7,151 @@
 
 <!-- Sayfa stili ve medya sorguları ayarlandı. Ekstra tasarım özelleştirmeleri -->
 <style>
-    body { background-color: #f0fdf4; overflow-x: hidden; }
-    .chat-bubble-wrapper { display: flex; align-items: flex-end; }
+    /* Gemini-inspired Readability & Layout */
+    body { background-color: var(--bg-body); color: var(--text-main); overflow: hidden; font-family: 'Inter', -apple-system, sans-serif; margin: 0; padding: 0; height: 100dvh; }
+    .chat-container { height: 100%; width: 100vw; border: none !important; border-radius: 0 !important; margin: 0 !important; max-width: 100% !important; display: flex; overflow: hidden; background-color: var(--bg-body); }
+    
+    .chat-main { height: 100%; display: flex; flex-direction: column; background: var(--bg-body); min-width: 0; flex-grow: 1; position: relative; }
+    .chat-header { border-bottom: 1px solid var(--border-dim) !important; padding: 10px 16px !important; flex-shrink: 0; z-index: 10; background: var(--bg-header); }
+    
+    #chatMessages { 
+        flex-grow: 1; 
+        overflow-y: auto; 
+        padding: 24px 16px; 
+        scroll-behavior: smooth;
+        max-width: 800px;
+        margin: 0 auto;
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .chat-bubble-wrapper { display: flex; align-items: flex-start; margin-bottom: 24px; width: 100%; }
     .user-bubble-wrapper { justify-content: flex-end; }
     .ai-bubble-wrapper { justify-content: flex-start; }
-    .chat-bubble { max-width: 85%; padding: 12px 16px; position: relative; font-size: 0.95rem; }
-    .user-bubble { background: #f3f4f6; color: #1f2937; border-radius: 12px 12px 0 12px; }
-    .ai-bubble { background: #d1fae5; color: #064e3b; border-radius: 12px 12px 12px 0; border: 1px solid #a7f3d0; }
-    .bubble-content { line-height: 1.5; word-break: break-word; }
-    .typing-dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: #059669; margin: 0 2px; animation: bounce 1.2s infinite; }
-    .typing-dot:nth-child(2) { animation-delay: 0.2s; }
-    .typing-dot:nth-child(3) { animation-delay: 0.4s; }
-    @@keyframes bounce { 0%,60%,100%{transform:translateY(0)} 30%{transform:translateY(-6px)} }
     
-    .panel-card { background: #fff; border-radius: 16px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); border: 1px solid #e5e7eb; overflow: hidden; }
-    .stat-box { background: #059669; color: white; border-radius: 16px; padding: 20px; box-shadow: 0 10px 15px -3px rgba(5,150,105,0.2); }
-    .feature-item { padding: 20px; text-align: left; background: #fff; border-radius: 12px; border: 1px solid #e5e7eb; transition: transform 0.2s; }
-    .feature-item:hover { transform: translateY(-3px); box-shadow: 0 4px 12px rgba(5,150,105,0.08); border-color: #34d399; }
-    .feature-icon-box { display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 40px; border-radius: 10px; background: #ecfdf5; color: #059669; margin-bottom: 12px; }
-    .action-btn { background: #fff; border: 1px solid #e5e7eb; padding: 12px 16px; border-radius: 10px; color: #4b5563; font-weight: 500; text-align: left; width: 100%; transition: all 0.2s; display: flex; align-items: center; }
-    .action-btn:hover { border-color: #059669; color: #059669; background: #ecfdf5; }
-    .action-btn i { margin-right: 12px; color: #059669; }
+    .chat-bubble { max-width: 85%; position: relative; font-size: 1rem; line-height: 1.6; }
+    .user-bubble { background: var(--bg-input); color: var(--text-main); border-radius: 20px; padding: 10px 18px; }
+    .ai-bubble { background: transparent; color: var(--text-main); padding: 0; width: 100%; }
+    
+    .bubble-content { width: 100%; font-size: 1.05rem; }
+    .bubble-content p { margin-bottom: 1rem; }
+    .bubble-content p:last-child { margin-bottom: 0; }
+    .bubble-content h4 { font-size: 1.25rem; font-weight: 600; margin-top: 1.5rem; margin-bottom: 0.75rem; color: var(--text-main); }
+    .bubble-content strong { color: var(--text-main); font-weight: 700; }
 
-    /* Custom AI Rendering Styles */
-    .ai-custom-table { width: 100%; border-collapse: separate; border-spacing: 0; margin-top: 10px; margin-bottom: 15px; background: white; border-radius: 12px; overflow: hidden; border: 1px solid #a7f3d0; box-shadow: 0 2px 8px rgba(5,150,105,0.1); }
-    .ai-custom-table th { background: linear-gradient(135deg, #059669 0%, #10b981 100%); color: white; padding: 12px 15px; font-weight: 600; text-align: left; }
-    .ai-custom-table td { padding: 12px 15px; border-bottom: 1px solid #e5e7eb; color: #1f2937; }
-    .ai-custom-table tr:last-child td { border-bottom: none; }
-    .ai-custom-table tbody tr:hover { background: #f0fdf4; }
+    /* Input Area - Clean & Pill Shape */
+    .chat-input-area { 
+        padding: 12px 16px 20px 16px;
+        width: 100%;
+        max-width: 800px;
+        margin: 0 auto;
+        background: var(--bg-body);
+        z-index: 100;
+    }
+    .input-pill-container {
+        background: var(--bg-input);
+        border-radius: 28px;
+        padding: 4px 6px 4px 12px;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        border: 1px solid var(--border-dim);
+        min-height: 52px;
+    }
+    .input-pill-container:focus-within {
+        background: var(--bg-header);
+        box-shadow: 0 2px 12px rgba(0,0,0,0.1);
+        border-color: var(--accent-green);
+    }
+    #chatInput { 
+        background: transparent !important; 
+        border: none !important; 
+        box-shadow: none !important; 
+        padding: 10px 4px !important; 
+        font-size: 1rem; 
+        color: var(--text-main);
+        flex-grow: 1;
+        line-height: 1.5;
+    }
+    #chatInput::placeholder { color: var(--text-muted); }
+    .input-action-btn { 
+        background: transparent !important; 
+        border: none !important; 
+        color: var(--text-muted) !important; 
+        width: 40px;
+        height: 40px;
+        display: flex; 
+        align-items: center; 
+        justify-content: center; 
+        border-radius: 50%;
+        transition: background 0.2s;
+        flex-shrink: 0;
+    }
+    .input-action-btn:hover { background: rgba(128,128,128,0.1); color: var(--text-main) !important; }
+    #sendBtn { color: var(--accent-green) !important; }
     
-    .ai-custom-link-btn { display: inline-flex; align-items: center; background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); color: white !important; padding: 8px 16px; border-radius: 20px; font-weight: 600; text-decoration: none !important; font-size: 0.9rem; margin: 4px; box-shadow: 0 4px 10px rgba(37,99,235,0.3); transition: transform 0.2s, box-shadow 0.2s; }
-    .ai-custom-link-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 15px rgba(37,99,235,0.4); color: white; }
-    .ai-custom-link-btn i { margin-right: 6px; }
-    
-    .ai-custom-list { list-style: none; padding: 0; margin: 10px 0; }
-    .ai-custom-list li { background: white; border: 1px solid #cbd5e1; padding: 12px 16px; border-radius: 12px; margin-bottom: 8px; display: flex; align-items: flex-start; box-shadow: 0 2px 4px rgba(0,0,0,0.02); }
-    .ai-custom-list li::before { content: "🎯"; margin-right: 10px; font-size: 1.1rem; }
-    
-    .ai-bubble h1, .ai-bubble h2, .ai-bubble h3 { font-size: 1.1rem; font-weight: 700; color: #064e3b; border-bottom: 2px solid #a7f3d0; padding-bottom: 5px; margin-top: 15px; margin-bottom: 10px; }
+    /* Recording State */
+    .recording-active { background: #fee2e2 !important; border-color: #ef4444 !important; }
+    .recording-pulse { color: #ef4444 !important; animation: pulse 1.5s infinite; }
+    @@keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
 
-    /* Chat layout */
-    .chat-container { height: calc(100vh - 70px); }
-    
-    /* Mobil: sidebar overlay */
+    /* Mobile Overrides */
     @@media (max-width: 767px) {
-        .chat-container { height: calc(100vh - 60px); border-radius: 0 !important; margin-top: 0 !important; }
-        .chat-sidebar {
-            position: fixed !important;
-            left: -100% !important;
-            top: 0 !important;
-            height: 100vh !important;
-            z-index: 1300;
-            width: 280px !important;
-            min-width: 280px !important;
-            transition: left 0.3s ease;
-            box-shadow: 4px 0 20px rgba(0,0,0,0.2);
-        }
+        .chat-sidebar { position: fixed !important; left: -100% !important; top: 0 !important; height: 100dvh !important; z-index: 1300; width: 280px !important; transition: left 0.3s ease; background: var(--bg-body) !important; }
         .chat-sidebar.sidebar-open { left: 0 !important; }
-        .sidebar-dim-overlay {
-            display: none;
-            position: fixed;
-            inset: 0;
-            background: rgba(0,0,0,0.4);
-            z-index: 1250;
-        }
-        .sidebar-dim-overlay.open { display: block; }
-        #sidebarToggleBtn { display: flex !important; }
+        #chatMessages { padding: 16px 12px; }
+        .chat-bubble { max-width: 92%; }
+        .bubble-content { font-size: 1rem; }
+        .chat-input-area { padding: 8px 12px 12px 12px; }
+        .input-pill-container { min-height: 48px; }
     }
-    @@media (min-width: 768px) {
-        #sidebarToggleBtn { display: none !important; }
+    @@media (min-width: 768px) { #sidebarToggleBtn { display: none !important; } }
+    
+    /* Sidebar Item Theme Fixes */
+    .chat-sidebar { 
+        background-color: var(--bg-header) !important; 
+        border-right: 1px solid var(--border-dim) !important; 
     }
+    .session-item { 
+        background-color: var(--bg-card) !important;
+        border-bottom: 1px solid var(--border-dim) !important; 
+        transition: all 0.2s;
+        padding: 12px 16px !important;
+        cursor: pointer;
+        margin-bottom: 8px !important;
+        border-radius: 12px !important;
+        border: 1px solid transparent !important;
+    }
+    .session-item:hover { 
+        background-color: var(--bg-input) !important; 
+        border-color: var(--accent-green) !important;
+    }
+    .active-session { 
+        background-color: var(--bg-input) !important; 
+        border: 1px solid var(--accent-green) !important;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    .session-item span { color: var(--text-main) !important; font-weight: 500; }
+    .session-item .text-secondary { color: var(--text-muted) !important; font-size: 0.85rem; }
+
+    /* Scrollbar Polish */
+    #chatMessages::-webkit-scrollbar { width: 6px; }
+    #chatMessages::-webkit-scrollbar-track { background: transparent; }
+    #chatMessages::-webkit-scrollbar-thumb { background: var(--border-dim); border-radius: 10px; }
+    
+    .chat-sidebar::-webkit-scrollbar { width: 4px; }
+    .chat-sidebar::-webkit-scrollbar-thumb { background: var(--border-dim); border-radius: 10px; }
 </style>
 
-<div class="chat-container d-flex mx-auto shadow-sm" style="max-width: 1400px; background: #fff; border-radius: 16px; overflow: hidden; border: 1px solid #e5e7eb; margin-top: 10px;">
+<div class="chat-container">
     <!-- Sidebar dim overlay (mobile only) -->
     <div class="sidebar-dim-overlay" id="sidebarDimOverlay"></div>
     
     <!-- ── Sidebar ── -->
-    <div class="chat-sidebar bg-light d-flex flex-column p-0" id="chatSidebar" style="width:280px; min-width:260px; border-right:1px solid #e5e7eb;">
-        <div class="p-4 border-bottom bg-white d-flex align-items-center justify-content-between">
+    <div class="chat-sidebar d-flex flex-column p-0" id="chatSidebar" style="width:280px; min-width:260px;">
+        <div class="p-4 border-bottom d-flex align-items-center justify-content-between" style="background: var(--bg-header);">
             <h6 class="mb-0 fw-bold text-dark d-flex align-items-center">
                 <i data-lucide="message-square" class="me-2" style="color:#059669;" size="18"></i> Sohbetler
             </h6>
@@ -94,7 +160,7 @@
             </button>
         </div>
 
-        <div class="session-list flex-grow-1 p-2" style="overflow-y:auto; background: #fdfdfd;">
+        <div class="session-list flex-grow-1 p-2" style="overflow-y:auto; background: var(--bg-body);">
             @if (!sessions.Any())
             {
                 <p class="text-muted small text-center mt-4">Henüz sohbet yok.<br>Yeni bir sohbet başlat.</p>
@@ -108,7 +174,7 @@
                 </a>
             }
         </div>
-        <div class="p-3 bg-white border-top">
+        <div class="p-3 border-top" style="background: var(--bg-header);">
             <a asp-action="Index" class="btn btn-outline-secondary w-100 d-flex align-items-center justify-content-center gap-2" style="border-radius: 10px;">
                 <i data-lucide="layout-dashboard" size="16"></i> Panele Dön
             </a>
@@ -116,37 +182,30 @@
     </div>
 
     <!-- ── Main Chat Area ── -->
-    <div class="chat-main flex-grow-1 d-flex flex-column position-relative" style="background: #ffffff; min-width:0;">
+    <div class="chat-main flex-grow-1 d-flex flex-column position-relative" style="min-width:0;">
 
-        <div class="chat-header d-flex align-items-center px-4 py-3 bg-white border-bottom">
-            <button class="btn btn-sm btn-outline-secondary d-md-none me-3" id="sidebarToggleBtn" title="Sohbetler">
-                <i data-lucide="menu" size="20"></i>
+        <div class="chat-header d-flex align-items-center px-3 py-2" style="background: var(--bg-header);">
+            <button class="btn btn-sm btn-link text-dark d-md-none me-2" id="sidebarToggleBtn">
+                <i data-lucide="menu" size="24"></i>
             </button>
-            <div class="ai-avatar me-3" style="width:40px;height:40px;border-radius:50%;background:#e0e7ff; display:flex;align-items:center;justify-content:center; border: 1px solid #c7d2fe">
-                <i data-lucide="sparkles" size="20" style="color:#4f46e5;"></i>
+            <div class="flex-grow-1 text-center d-flex align-items-center justify-content-center">
+                <span class="fw-medium text-dark fs-5">Dopamind AI</span>
             </div>
-            <div>
-                <h6 class="mb-0 fw-bold text-dark fs-5">Dopamind Asistan</h6>
-                <small class="text-success fw-medium d-flex align-items-center"><span style="display:inline-block;width:8px;height:8px;background:#10b981;border-radius:50%;margin-right:6px;"></span> Çevrimiçi</small>
+            <div class="user-avatar" style="width:32px;height:32px;border-radius:50%;background:var(--bg-card);display:flex;align-items:center;justify-content:center;border:1px solid var(--border-dim);">
+                <span class="small fw-bold text-secondary">B</span>
             </div>
         </div>
 
         <!-- Messages -->
-        <div id="chatMessages" class="flex-grow-1 p-4" style="overflow-y:auto; scroll-behavior: smooth;">
+        <div id="chatMessages" class="flex-grow-1 p-0" style="overflow-y:auto; scroll-behavior: smooth;">
             @if (!messages.Any())
             {
-                <div class="text-center mt-5 text-muted" id="emptyState">
-                    <div class="mb-3 d-flex justify-content-center">
-                        <div style="width: 80px; height: 80px; background: #e0e7ff; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #4f46e5;">
-                            <i data-lucide="messages-square" size="40"></i>
-                        </div>
-                    </div>
-                    <h4 class="text-dark fw-bold mb-2">Nasıl Yardımcı Olabilirim?</h4>
-                    <p class="text-secondary mb-4" style="max-width: 400px; margin: 0 auto;">Planlama, öğrenme süreçleri ve her türlü akademik konuda sorularını yanıtlamaya hazırım.</p>
-                    <div class="d-flex flex-wrap gap-2 justify-content-center mt-4">
-                        <button class="btn btn-outline-primary suggestion-btn rounded-pill px-4">📅 Bugün neler var?</button>
-                        <button class="btn btn-outline-primary suggestion-btn rounded-pill px-4">📚 Sınav hazırlığı taktikleri</button>
-                        <button class="btn btn-outline-primary suggestion-btn rounded-pill px-4">⏰ Bana çalışma rutini öner</button>
+                <div class="text-start mt-5" id="emptyState">
+                    <h4 class="fw-bold mb-4">Merhaba @(User.Identity?.Name ?? "Beytullah"),<br>bugün sana nasıl yardımcı olabilirim?</h4>
+                    <div class="d-flex flex-column gap-2 mt-4">
+                        <button class="btn suggestion-btn">📅 Bugün neler var?</button>
+                        <button class="btn suggestion-btn">📚 Sınav hazırlığı taktikleri</button>
+                        <button class="btn suggestion-btn">⏰ Bana çalışma rutini öner</button>
                     </div>
                 </div>
             }
@@ -154,52 +213,53 @@
             {
                 @foreach (var msg in messages)
                 {
-                    <div class="chat-bubble-wrapper @(msg.Role == "user" ? "user-bubble-wrapper" : "ai-bubble-wrapper") mb-4">
+                    <div class="chat-bubble-wrapper @(msg.Role == "user" ? "user-bubble-wrapper" : "ai-bubble-wrapper")">
                         @if (msg.Role != "user")
                         {
-                            <div class="ai-avatar-sm me-3 mt-1" style="width:32px;height:32px;border-radius:8px;background:#ecfdf5;display:flex;align-items:center;justify-content:center;flex-shrink:0; border: 1px solid #a7f3d0">
-                                <i data-lucide="bot" size="18" style="color:#059669;"></i>
+                            <div class="ai-avatar-sm me-3 mt-1" style="width:24px;height:24px;border-radius:50%;background:linear-gradient(135deg, #4285f4, #9b72cb);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                                <i data-lucide="sparkles" size="14" style="color:white;"></i>
                             </div>
                         }
-                        <div class="chat-bubble @(msg.Role == "user" ? "user-bubble" : "ai-bubble") shadow-sm" style="font-size: 1rem; line-height: 1.6; padding: 14px 20px;">
+                        <div class="chat-bubble @(msg.Role == "user" ? "user-bubble" : "ai-bubble")">
                             <div class="bubble-content" data-markdown="@msg.Content.Replace("\"", "&quot;")">@msg.Content</div>
-                            <div class="bubble-time mt-2 opacity-50" style="font-size: 0.75rem; text-align: right;">@msg.SentAt.ToString("HH:mm")</div>
                         </div>
                     </div>
                 }
             }
 
             <!-- Typing indicator -->
-            <div id="typingIndicator" class="chat-bubble-wrapper ai-bubble-wrapper mb-4 d-none">
-                <div class="ai-avatar-sm me-3 mt-1" style="width:32px;height:32px;border-radius:8px;background:#ecfdf5;display:flex;align-items:center;justify-content:center;flex-shrink:0; border: 1px solid #a7f3d0">
-                    <i data-lucide="bot" size="18" style="color:#059669;"></i>
+            <div id="typingIndicator" class="chat-bubble-wrapper ai-bubble-wrapper d-none">
+                <div class="ai-avatar-sm me-3 mt-1" style="width:24px;height:24px;border-radius:50%;background:linear-gradient(135deg, #4285f4, #9b72cb);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                    <i data-lucide="sparkles" size="14" style="color:white;"></i>
                 </div>
-                <div class="ai-bubble shadow-sm" style="padding:16px 20px;">
-                    <span class="typing-dot"></span>
-                    <span class="typing-dot"></span>
-                    <span class="typing-dot"></span>
+                <div class="ai-bubble">
+                    <small class="text-secondary italic">Düşünüyor...</small>
                 </div>
             </div>
         </div>
 
         <!-- Input Area -->
-        <div class="chat-input-area p-4 bg-white border-top">
-            <div class="d-flex align-items-end gap-3 position-relative">
-                <button type="button" class="btn btn-light border" id="attachBtn" style="border-radius:12px; width:52px; height:52px; display:flex;align-items:center;justify-content:center; flex-shrink:0; transition: all 0.2s;" title="Dosya Ekle">
-                    <i data-lucide="paperclip" class="text-secondary" style="width:24px;height:24px;"></i>
+        <div class="chat-input-area">
+            <div class="input-pill-container" id="inputPillContainer">
+                <button type="button" class="input-action-btn" id="attachBtn" title="Dosya Ekle">
+                    <i data-lucide="plus" size="20"></i>
                 </button>
                 <input type="file" id="chatFileInput" class="d-none" />
-                <div class="flex-grow-1">
-                    <textarea id="chatInput" class="form-control" rows="1"
-                        placeholder="AI Koç'a bir şey sor... (Shift+Enter = alt satır)"
-                        style="resize:none; border-radius:12px; max-height:150px; padding: 14px 20px; font-size: 1rem; border: 1px solid #cbd5e1; box-shadow: 0 2px 4px rgba(0,0,0,0.02);"></textarea>
-                </div>
-                <button id="sendBtn" class="btn text-white" style="background:#059669; border-radius:12px; width:52px; height:52px; display:flex;align-items:center;justify-content:center; flex-shrink:0; box-shadow: 0 4px 10px rgba(5,150,105,0.3);" title="Gönder">
-                    <i data-lucide="send" style="width:24px;height:24px;"></i>
+                
+                <textarea id="chatInput" class="form-control" rows="1"
+                    placeholder="Dopamind'a bir şey sor..."
+                    style="resize:none; max-height:150px;"></textarea>
+                
+                <button type="button" class="input-action-btn" id="voiceBtn" title="Sesli Mesaj">
+                    <i data-lucide="mic" id="micIcon" size="20"></i>
+                </button>
+                
+                <button id="sendBtn" class="input-action-btn" title="Gönder">
+                    <i data-lucide="send" size="20"></i>
                 </button>
             </div>
-            <div class="d-flex gap-2 mt-2 px-1" id="contextBadges">
-                <small class="text-secondary fw-medium"><i data-lucide="link" size="12" class="me-1"></i>Ekli Dosya: <span id="contextInfo" class="text-dark">Yok</span></small>
+            <div class="text-center mt-2" style="height: 12px;">
+                <small id="contextInfo" class="text-secondary" style="font-size: 10px;"></small>
             </div>
         </div>
     </div>
@@ -266,27 +326,39 @@
     }
 
     // Configure marked to open links in new tab and use custom rendering
-    const renderer = new marked.Renderer();
-    renderer.link = function(href, title, text) {
-        // Render links as colorful interactive balloons
-        let isDoc = href.toLowerCase().includes('pdf') || href.toLowerCase().includes('doc') || text.toLowerCase().includes('dosya') || text.toLowerCase().includes('belge');
-        let icon = isDoc ? '<i data-lucide="file-text" size="16"></i>' : '<i data-lucide="external-link" size="16"></i>';
-        return `<a href="${href}" title="${title || ''}" target="_blank" rel="noopener noreferrer" class="ai-custom-link-btn">${icon}<span>${text}</span></a>`;
-    };
-    
-    renderer.table = function(header, body) {
-        // Render tables with nice styling
-        return `<div class="table-responsive"><table class="ai-custom-table"><thead>${header}</thead><tbody>${body}</tbody></table></div>`;
-    };
-    
-    renderer.list = function(body, ordered, start) {
-        if(ordered) {
-            return `<ol class="ai-custom-list ordered-list" start="${start || 1}">${body}</ol>`;
+    // NOTE: marked v5+ uses token objects instead of individual string args
+    const renderer = {
+        link(token) {
+            const href = token.href || '';
+            const title = token.title || '';
+            const text = token.text || '';
+            let isDoc = href.toLowerCase().includes('pdf') || href.toLowerCase().includes('doc') || text.toLowerCase().includes('dosya') || text.toLowerCase().includes('belge');
+            let icon = isDoc ? '<i data-lucide="file-text" size="16"></i>' : '<i data-lucide="external-link" size="16"></i>';
+            return `<a href="${href}" title="${title}" target="_blank" rel="noopener noreferrer" class="ai-custom-link-btn">${icon}<span>${text}</span></a>`;
+        },
+        table(token) {
+            const header = token.header.map(cell => `<th>${marked.parseInline(cell.text)}</th>`).join('');
+            const body = token.rows.map(row =>
+                `<tr>${row.map(cell => `<td>${marked.parseInline(cell.text)}</td>`).join('')}</tr>`
+            ).join('');
+            return `<div class="table-responsive"><table class="ai-custom-table"><thead><tr>${header}</tr></thead><tbody>${body}</tbody></table></div>`;
+        },
+        list(token) {
+            // Recalculate body by parsing each item's text as inline markdown
+            const body = token.items.map(item => {
+                // If the item has tokens, use marked.parse on them, otherwise use item.text
+                const itemText = item.tokens ? marked.parser(item.tokens) : marked.parseInline(item.text);
+                return `<li>${itemText}</li>`;
+            }).join('');
+            
+            if (token.ordered) {
+                return `<ol class="ai-custom-list ordered-list" start="${token.start || 1}">${body}</ol>`;
+            }
+            return `<ul class="ai-custom-list">${body}</ul>`;
         }
-        return `<ul class="ai-custom-list">${body}</ul>`;
     };
 
-    marked.setOptions({ renderer: renderer });
+    marked.use({ renderer });
 
     // Helper: always read current session id dynamically
     function getSessionId() { return sessionIdInput.value || null; }
@@ -315,6 +387,65 @@
             sendMessage();
         });
     });
+
+    // ── Voice Message Logic ──────────────────────────────────
+    const voiceBtn = document.getElementById('voiceBtn');
+    const micIcon = document.getElementById('micIcon');
+    const inputPillContainer = document.getElementById('inputPillContainer');
+    let mediaRecorder;
+    let audioChunks = [];
+    let isRecording = false;
+
+    if (voiceBtn) {
+        voiceBtn.addEventListener('click', async () => {
+            if (!isRecording) {
+                try {
+                    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                    mediaRecorder = new MediaRecorder(stream);
+                    audioChunks = [];
+
+                    mediaRecorder.ondataavailable = (event) => {
+                        audioChunks.push(event.data);
+                    };
+
+                    mediaRecorder.onstop = async () => {
+                        const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+                        const formData = new FormData();
+                        formData.append('file', audioBlob, 'voice_message.webm');
+
+                        contextInfo.textContent = 'Ses yükleniyor...';
+                        try {
+                            const res = await fetch('/Dashboard/UploadFileAjax', {
+                                method: 'POST',
+                                body: formData
+                            });
+                            const data = await res.json();
+                            if (data.success) {
+                                attachedFileIds.push(data.fileId);
+                                contextInfo.textContent = 'Sesli mesaj eklendi 🎤';
+                            }
+                        } catch (e) {
+                            contextInfo.textContent = 'Ses yükleme hatası';
+                        }
+                    };
+
+                    mediaRecorder.start();
+                    isRecording = true;
+                    micIcon.classList.add('recording-pulse');
+                    inputPillContainer.classList.add('recording-active');
+                    contextInfo.textContent = 'Kaydediliyor...';
+                } catch (err) {
+                    alert('Mikrofon erişimi reddedildi veya bulunamadı.');
+                }
+            } else {
+                mediaRecorder.stop();
+                mediaRecorder.stream.getTracks().forEach(track => track.stop());
+                isRecording = false;
+                micIcon.classList.remove('recording-pulse');
+                inputPillContainer.classList.remove('recording-active');
+            }
+        });
+    }
 
     // New chat
     document.getElementById('newChatBtn').addEventListener('click', async () => {
@@ -352,13 +483,7 @@
 
         const time = new Date().toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
 
-        if (role !== 'user') {
-            const avatar = document.createElement('div');
-            avatar.className = 'ai-avatar-sm me-2 mt-1';
-            avatar.style.cssText = 'width:32px;height:32px;border-radius:50%;background:#e0e7ff;display:flex;align-items:center;justify-content:center;flex-shrink:0;border:1px solid #c7d2fe;';
-            avatar.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#4f46e5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>'; // Just a simple icon placeholder
-            wrapper.appendChild(avatar);
-        }
+
 
         const bubble = document.createElement('div');
         bubble.className = `chat-bubble ${role === 'user' ? 'user-bubble' : 'ai-bubble'}`;
@@ -388,9 +513,10 @@
 
     async function sendMessage() {
         const msg = chatInput.value.trim();
-        if (!msg) return;
+        if (!msg && attachedFileIds.length === 0) return;
 
-        appendMessage('user', msg);
+        const displayMsg = msg || (attachedFileIds.length > 0 ? "🎤 Sesli mesaj/dosya eklendi" : "");
+        appendMessage('user', displayMsg);
         chatInput.value = '';
         chatInput.style.height = 'auto';
 

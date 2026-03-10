@@ -258,11 +258,24 @@ public class DashboardController : Controller
         else if (new[] { ".txt", ".md" }.Contains(extension))
         {
             var text = await System.IO.File.ReadAllTextAsync(filePath);
-            analysis = text.Length > 3000 ? text[..3000] + "\n...(devamı kısaltıldı)" : text;
+            analysis = text.Length > 10000 ? text[..10000] + "\n...(devamı kısaltıldı)" : text;
         }
-        else if (new[] { ".pdf", ".docx", ".doc", ".pptx", ".ppt" }.Contains(extension))
+        else if (extension == ".pdf")
         {
-            analysis = $"'{fileName}' adlı dosya yüklendi. İçerik özeti için AI analizi uygulanacak.";
+            analysis = ReadPdfContent(filePath);
+        }
+        else if (new[] { ".docx", ".doc" }.Contains(extension))
+        {
+            analysis = ReadDocxContent(filePath);
+        }
+        else if (new[] { ".pptx", ".ppt" }.Contains(extension))
+        {
+            analysis = ReadPptxContent(filePath);
+        }
+        else if (extension == ".webm")
+        {
+            type = ResourceType.Audio;
+            analysis = "Sesli mesaj yüklendi.";
         }
         else
         {
@@ -279,7 +292,7 @@ public class DashboardController : Controller
             UploadDate = DateTime.UtcNow
         };
 
-        var geminiResult = await _geminiService.AnalyzeFileMetadataAsync(fileName, extension);
+        var geminiResult = await _geminiService.AnalyzeFileMetadataAsync(fileName, extension, analysis);
         if (geminiResult != null)
         {
             uploadedFile.Topic = geminiResult.Topic;
@@ -293,6 +306,78 @@ public class DashboardController : Controller
         await _dataService.AddFileAsync(uploadedFile);
 
         return Json(new { success = true, fileId = uploadedFile.Id, fileName = uploadedFile.FileName });
+    }
+
+    private string ReadPdfContent(string filePath)
+    {
+        try
+        {
+            using var pdfReader = new iText.Kernel.Pdf.PdfReader(filePath);
+            using var pdfDoc = new iText.Kernel.Pdf.PdfDocument(pdfReader);
+            var sb = new System.Text.StringBuilder();
+            for (int i = 1; i <= pdfDoc.GetNumberOfPages(); i++)
+            {
+                var page = pdfDoc.GetPage(i);
+                var text = iText.Kernel.Pdf.Canvas.Parser.PdfTextExtractor.GetTextFromPage(page);
+                sb.AppendLine(text);
+                if (sb.Length > 50000) break; // Limit context
+            }
+            return sb.ToString();
+        }
+        catch (Exception ex)
+        {
+            return $"PDF okuma hatası: {ex.Message}";
+        }
+    }
+
+    private string ReadDocxContent(string filePath)
+    {
+        try
+        {
+            using var doc = DocumentFormat.OpenXml.Packaging.WordprocessingDocument.Open(filePath, false);
+            var body = doc.MainDocumentPart?.Document.Body;
+            return body?.InnerText ?? "İçerik bulunamadı.";
+        }
+        catch (Exception ex)
+        {
+            return $"Word okuma hatası: {ex.Message}";
+        }
+    }
+
+    private string ReadPptxContent(string filePath)
+    {
+        try
+        {
+            using var presentation = DocumentFormat.OpenXml.Packaging.PresentationDocument.Open(filePath, false);
+            var part = presentation.PresentationPart;
+            if (part == null) return "İçerik bulunamadı.";
+
+            var sb = new System.Text.StringBuilder();
+            var slideIds = part.Presentation.SlideIdList?.Elements<DocumentFormat.OpenXml.Presentation.SlideId>();
+            if (slideIds != null)
+            {
+                foreach (var slideId in slideIds)
+                {
+                    var relId = slideId.RelationshipId?.Value;
+                    if (relId == null) continue;
+
+                    var slidePart = (DocumentFormat.OpenXml.Packaging.SlidePart)part.GetPartById(relId);
+                    var slide = slidePart.Slide;
+                    sb.AppendLine($"--- Slide ---");
+                    foreach (var text in slide.Descendants<DocumentFormat.OpenXml.Drawing.Text>())
+                    {
+                        sb.Append(text.Text);
+                    }
+                    sb.AppendLine();
+                    if (sb.Length > 30000) break;
+                }
+            }
+            return sb.ToString();
+        }
+        catch (Exception ex)
+        {
+            return $"PowerPoint okuma hatası: {ex.Message}";
+        }
     }
 
     private string ReadExcelContent(string filePath, string fileName)
@@ -468,9 +553,24 @@ public class DashboardController : Controller
 
                 var type = item.MimeType == "application/vnd.google-apps.folder" ? ResourceType.Folder : 
                            item.MimeType.Contains("image") ? ResourceType.Image :
-                           item.MimeType.Contains("video") ? ResourceType.Video : ResourceType.Link;
+                           item.MimeType.Contains("video") ? ResourceType.Video : ResourceType.Document;
 
                 var existingFile = existingFiles.FirstOrDefault(f => f.ParentId == parentDbId && f.FileName == item.Name);
+
+                string analysis = "Synced from Drive";
+                // Download and parse if it's a document and we have a token
+                if (type == ResourceType.Document && !string.IsNullOrEmpty(model.AccessToken))
+                {
+                    analysis = await DownloadAndAnalyzeDriveFile(item.Id, item.Name, item.MimeType, model.AccessToken);
+                    
+                    // Call Gemini analysis for deeper metadata
+                    var gemResult = await _geminiService.AnalyzeFileMetadataAsync(item.Name, Path.GetExtension(item.Name), analysis);
+                    if (gemResult != null)
+                    {
+                        analysis += $"\n\nAI Özet: {gemResult.Summary}";
+                        // We could also store Topic/Complexity here if those fields are added to UploadedFile but for now we update AnalysisSummary
+                    }
+                }
 
                 if (existingFile == null)
                 {
@@ -481,7 +581,7 @@ public class DashboardController : Controller
                         Url = item.WebViewLink,
                         Type = type,
                         UploadDate = DateTime.Now,
-                        AnalysisSummary = "Synced from Drive"
+                        AnalysisSummary = analysis
                     };
                     await _dataService.AddFileAsync(newFile);
                     driveIdToDbId[item.Id] = newFile.Id;
@@ -490,7 +590,8 @@ public class DashboardController : Controller
                 else
                 {
                     existingFile.Url = item.WebViewLink; 
-                    if(existingFile.Type != type) existingFile.Type = type; 
+                    if(existingFile.Type != type) existingFile.Type = type;
+                    existingFile.AnalysisSummary = analysis;
                     await _dataService.UpdateFileAsync(existingFile);
                     driveIdToDbId[item.Id] = existingFile.Id;
                 }
@@ -500,6 +601,60 @@ public class DashboardController : Controller
         }
 
         return Json(new { success = true, count = processedDriveIds.Count });
+    }
+
+    private async Task<string> DownloadAndAnalyzeDriveFile(string fileId, string fileName, string mimeType, string accessToken)
+    {
+        try
+        {
+            byte[] fileBytes;
+            string extension = "";
+
+            using var client = new HttpClient();
+            client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", accessToken);
+
+            if (mimeType.StartsWith("application/vnd.google-apps."))
+            {
+                // Export Google Docs/Sheets/Slides
+                string exportMime = mimeType switch
+                {
+                    "application/vnd.google-apps.spreadsheet" => "text/csv",
+                    "application/vnd.google-apps.presentation" => "application/pdf",
+                    _ => "application/pdf"
+                };
+                extension = exportMime.Contains("pdf") ? ".pdf" : ".csv";
+                
+                var exportUrl = $"https://www.googleapis.com/drive/3/files/{fileId}/export?mimeType={Uri.EscapeDataString(exportMime)}";
+                fileBytes = await client.GetByteArrayAsync(exportUrl);
+            }
+            else
+            {
+                // Download regular files
+                var downloadUrl = $"https://www.googleapis.com/drive/3/files/{fileId}?alt=media";
+                fileBytes = await client.GetByteArrayAsync(downloadUrl);
+                extension = Path.GetExtension(fileName).ToLower();
+            }
+
+            if (fileBytes == null || fileBytes.Length == 0) return "İçerik çekilemedi.";
+
+            // Save to temp file for parsing
+            var tempPath = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString() + extension);
+            await System.IO.File.WriteAllBytesAsync(tempPath, fileBytes);
+
+            string content = "";
+            if (extension == ".pdf") content = ReadPdfContent(tempPath);
+            else if (extension == ".docx" || extension == ".doc") content = ReadDocxContent(tempPath);
+            else if (extension == ".pptx" || extension == ".ppt") content = ReadPptxContent(tempPath);
+            else if (extension == ".csv" || extension == ".txt") content = await System.IO.File.ReadAllTextAsync(tempPath);
+            else content = "Bu format henüz derinlemesine analiz edilemiyor.";
+
+            System.IO.File.Delete(tempPath);
+            return content.Length > 20000 ? content[..20000] + "..." : content;
+        }
+        catch (Exception ex)
+        {
+            return $"Drive okuma hatası: {ex.Message}";
+        }
     }
 
     // ─── Full-page Chat ─────────────────────────────────────────────────
@@ -771,6 +926,7 @@ public class DashboardController : Controller
     {
         public string ParentId { get; set; } = string.Empty;
         public string FolderUrl { get; set; } = string.Empty;
+        public string? AccessToken { get; set; }
         public List<DriveFileItem> Files { get; set; } = new List<DriveFileItem>();
     }
 

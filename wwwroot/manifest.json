@@ -2,7 +2,7 @@
   "name": "Dopamind AI Planner",
   "short_name": "Dopamind",
   "description": "AI-powered task management and planning app.",
-  "start_url": "/",
+  "start_url": "/Dashboard/Chat",
   "display": "standalone",
   "background_color": "#000000",
   "theme_color": "#4b0082",

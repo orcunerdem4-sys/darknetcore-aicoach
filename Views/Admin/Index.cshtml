@@ -86,6 +86,50 @@
         </div>
       </div>
 
+      <!-- Errors Category -->
+      <div class="accordion-item glass-panel mb-3 border-0 overflow-hidden rounded">
+        <h2 class="accordion-header" id="headingErrors">
+          <button class="accordion-button collapsed bg-transparent text-danger fw-bold" type="button" data-bs-toggle="collapse" data-bs-target="#collapseErrors" aria-expanded="false" aria-controls="collapseErrors">
+            <i data-lucide="alert-triangle" class="me-2"></i> Sistem Hataları
+          </button>
+        </h2>
+        <div id="collapseErrors" class="accordion-collapse collapse" aria-labelledby="headingErrors" data-bs-parent="#adminAccordion">
+          <div class="accordion-body">
+                <div class="list-group list-group-flush" style="max-height: 500px; overflow-y: auto;">
+                    @{ var errors = (ViewBag.Errors as List<DarkNetCore.Models.ErrorLog>) ?? new List<DarkNetCore.Models.ErrorLog>(); }
+                    @if (errors.Any())
+                    {
+                        foreach (var e in errors)
+                        {
+                            var userLabel = string.IsNullOrEmpty(e.UserId) ? "Anonim" : users?.FirstOrDefault(u => u.Id == e.UserId)?.Username ?? e.UserId;
+                            <div class="list-group-item bg-transparent border-bottom border-light mb-2 p-3 rounded" style="background: rgba(255,255,255,0.5) !important;">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <span class="badge bg-danger-subtle text-danger fw-bold"><i data-lucide="alert-circle" size="14" class="me-1"></i>Hata</span>
+                                    <small class="text-secondary"><i data-lucide="clock" size="12" class="me-1"></i>@e.CreatedAt.ToString("dd MMM HH:mm")</small>
+                                </div>
+                                <div class="mb-2"><strong>Mesaj:</strong> <span class="text-dark">@e.Message</span></div>
+                                <div class="mb-2"><small><strong>Kullanıcı:</strong> @userLabel | <strong>Yol:</strong> @e.Path</small></div>
+                                @if (!string.IsNullOrEmpty(e.StackTrace))
+                                {
+                                    <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#stackTrace_@e.Id">
+                                        Detayları Gör
+                                    </button>
+                                    <div class="collapse mt-2" id="stackTrace_@e.Id">
+                                        <pre class="bg-light p-2 rounded small" style="max-height: 200px; overflow-y: auto;">@e.StackTrace</pre>
+                                    </div>
+                                }
+                            </div>
+                        }
+                    }
+                    else
+                    {
+                        <div class="text-center text-muted p-4">Kayıtlı sistem hatası bulunmuyor.</div>
+                    }
+                </div>
+          </div>
+        </div>
+      </div>
+
     </div>
 </div>
 
