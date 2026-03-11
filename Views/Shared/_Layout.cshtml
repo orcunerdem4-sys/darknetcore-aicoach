@@ -127,12 +127,15 @@
                 </a>
             </div>
             <nav class="main-nav">
-                <a asp-controller="Dashboard" asp-action="Chat" class="nav-link @(ViewContext.RouteData.Values["Action"]?.ToString() == "Chat" ? "active" : "")">
+                <a asp-controller="Dashboard" asp-action="Chat" class="nav-link @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Dashboard" && ViewContext.RouteData.Values["Action"]?.ToString() == "Chat" ? "active" : "")">
                     <i data-lucide="home" class="nav-icon"></i> Ana Sayfa
+                </a>
+                <a asp-controller="Dashboard" asp-action="Chat" class="nav-link @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Dashboard" && ViewContext.RouteData.Values["Action"]?.ToString() == "Chat" ? "active" : "")">
+                    <i data-lucide="sparkles" class="nav-icon"></i> AI Coach
                 </a>
                 @if (User.Identity != null && User.Identity.IsAuthenticated)
                 {
-                <a asp-controller="Dashboard" asp-action="Index" class="nav-link @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Dashboard" ? "active" : "")">
+                <a asp-controller="Dashboard" asp-action="Index" class="nav-link @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Dashboard" && ViewContext.RouteData.Values["Action"]?.ToString() == "Index" ? "active" : "")">
                     <i data-lucide="layout-dashboard" class="nav-icon"></i> Çalışma Masası
                 </a>
                 <a asp-controller="Group" asp-action="Index" class="nav-link @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Group" ? "active" : "")">
@@ -233,12 +236,24 @@
             <div class="offcanvas-body d-flex flex-column" style="background-color: var(--bg-body);">
                 <p class="small text-secondary mb-3">Mobil cihazdayken aklınıza gelen geliştirmeleri veya ders notlarını buraya hızlıca kaydedebilirsiniz.</p>
                 
-                <div class="mb-3">
-                    <textarea id="feedbackInput" class="form-control border-0 shadow-sm" rows="3" placeholder="Yeni bir not yazın..." style="border-radius: 12px; padding: 15px; resize: none; background: var(--bg-input); color: var(--text-main);"></textarea>
+                <div class="mb-3 position-relative">
+                    <textarea id="feedbackInput" class="form-control border-0 shadow-sm" rows="3" placeholder="Yeni bir not yazın (Görsel yapıştırın veya sürükleyin)..." style="border-radius: 12px; padding: 15px; resize: none; background: var(--bg-input); color: var(--text-main);"></textarea>
+                    
+                    <!-- Preview Container -->
+                    <div id="feedbackImagePreview" class="mt-2 d-none position-relative" style="width: 80px; height: 80px;">
+                        <img id="feedbackPreviewImg" src="" class="rounded shadow-sm" style="width: 100%; height: 100%; object-fit: cover; border: 2px solid var(--accent-green);">
+                        <button onclick="clearFeedbackImage()" class="btn btn-danger btn-sm p-0 rounded-circle position-absolute" style="top: -5px; right: -5px; width: 20px; height: 20px; line-height: 1;">&times;</button>
+                    </div>
                 </div>
-                <button class="btn btn-primary rounded-pill mb-4 w-100 fw-bold shadow-sm" onclick="saveFeedback()">
-                    <i data-lucide="save" size="16" class="me-1"></i> Notu Kaydet
-                </button>
+                <input type="file" id="feedbackImageInput" class="d-none" accept="image/*">
+                <div class="d-flex gap-2 mb-3">
+                    <button class="btn btn-outline-secondary btn-sm flex-grow-1" onclick="document.getElementById('feedbackImageInput').click()">
+                        <i data-lucide="image" size="14"></i> Görsel Ekle
+                    </button>
+                    <button class="btn btn-primary btn-sm flex-grow-1 fw-bold shadow-sm" onclick="saveFeedback()">
+                        <i data-lucide="save" size="16" class="me-1"></i> Notu Kaydet
+                    </button>
+                </div>
 
                 <h6 class="fw-bold border-bottom pb-2 mb-3 d-flex align-items-center" style="color: var(--text-main); border-color: var(--border-dim) !important;">
                     <i data-lucide="history" size="16" class="me-2"></i> Kaydedilen Notlar
@@ -357,7 +372,12 @@
                     const date = new Date(note.createdAt).toLocaleString('tr-TR', { day: 'numeric', month: 'short', hour:'2-digit', minute:'2-digit' });
                     const div = document.createElement('div');
                     div.className = 'bg-white p-3 rounded shadow-sm border position-relative';
+                    let imgHtml = '';
+                    if (note.imagePath) {
+                        imgHtml = `<img src="${note.imagePath}" class="rounded mt-2 mb-1 w-100 shadow-sm cursor-pointer" onclick="window.open('${note.imagePath}', '_blank')" style="max-height: 150px; object-fit: cover;">`;
+                    }
                     div.innerHTML = `<p class="mb-2 text-dark" style="font-size: 0.95rem; line-height: 1.5; white-space: pre-wrap;">${note.content.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</p>
+                                     ${imgHtml}
                                      <small class="text-secondary opacity-75" style="font-size: 0.75rem;"><i data-lucide="clock" size="10" class="me-1"></i>${date}</small>`;
                     list.appendChild(div);
                 });
@@ -367,17 +387,83 @@
             }
         }
 
+        let selectedFeedbackBlob = null;
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const input = document.getElementById('feedbackInput');
+            const fileInput = document.getElementById('feedbackImageInput');
+            
+            if(input) {
+                input.addEventListener('paste', (e) => {
+                    const items = (e.clipboardData || e.originalEvent.clipboardData).items;
+                    for (let i = 0; i < items.length; i++) {
+                        if (items[i].type.indexOf('image') !== -1) {
+                            const blob = items[i].getAsFile();
+                            previewFeedbackImage(blob);
+                        }
+                    }
+                });
+
+                // Drag & Drop Support
+                input.addEventListener('dragover', (e) => {
+                    e.preventDefault();
+                    input.style.borderColor = 'var(--accent-primary)';
+                });
+                input.addEventListener('dragleave', () => {
+                    input.style.borderColor = '';
+                });
+                input.addEventListener('drop', (e) => {
+                    e.preventDefault();
+                    input.style.borderColor = '';
+                    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+                        const file = e.dataTransfer.files[0];
+                        if (file.type.startsWith('image/')) {
+                            previewFeedbackImage(file);
+                        }
+                    }
+                });
+            }
+            if(fileInput) {
+                fileInput.addEventListener('change', (e) => {
+                    if(e.target.files && e.target.files[0]) previewFeedbackImage(e.target.files[0]);
+                });
+            }
+        });
+
+        function previewFeedbackImage(blob) {
+            selectedFeedbackBlob = blob;
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const preview = document.getElementById('feedbackImagePreview');
+                const img = document.getElementById('feedbackPreviewImg');
+                img.src = e.target.result;
+                preview.classList.remove('d-none');
+            };
+            reader.readAsDataURL(blob);
+        }
+
+        function clearFeedbackImage() {
+            selectedFeedbackBlob = null;
+            document.getElementById('feedbackImagePreview').classList.add('d-none');
+            document.getElementById('feedbackImageInput').value = '';
+        }
+
         async function saveFeedback() {
             const input = document.getElementById('feedbackInput');
             if(!input) return;
             const content = input.value.trim();
-            if(!content) return;
+            if(!content && !selectedFeedbackBlob) return;
 
             try {
+                const formData = new FormData();
+                formData.append('content', content);
+                if(selectedFeedbackBlob) {
+                    formData.append('image', selectedFeedbackBlob, 'pasted_image.png');
+                }
+
                 const res = await fetch('/Dashboard/SaveFeedback', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ content: content })
+                    body: formData
                 });
                 if (res.redirected) {
                     window.location.href = '/Account/Login';
@@ -385,6 +471,7 @@
                 }
                 if(res.ok) {
                     input.value = '';
+                    clearFeedbackImage();
                     loadFeedbacks();
                     window.showToast("Not başarıyla eklendi!");
                 } else {

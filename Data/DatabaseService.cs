@@ -220,12 +220,13 @@ public class DatabaseService
     // -----------------------------------------
     // Feedback Notes Operations
     // -----------------------------------------
-    public async Task SaveFeedbackAsync(string content)
+    public async Task SaveFeedbackAsync(string content, string? imagePath = null)
     {
         var note = new FeedbackNote
         {
             Id = Guid.NewGuid().ToString(),
             Content = content,
+            ImagePath = imagePath,
             CreatedAt = DateTime.UtcNow,
             UserId = GetCurrentUserId()
         };

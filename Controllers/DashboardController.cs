@@ -26,6 +26,9 @@ public class DashboardController : Controller
         ViewBag.Streak = await _dataService.GetOrCreateStreakAsync();
         ViewBag.SleepRecords = await _dataService.GetRecentSleepRecordsAsync(7);
         
+        var allFiles = await _dataService.GetFilesAsync();
+        ViewBag.RecentFiles = allFiles.OrderByDescending(f => f.UploadDate).Take(5).ToList();
+        
         return View(tasks);
     }
 
@@ -44,6 +47,7 @@ public class DashboardController : Controller
             textColor = t.Priority == TaskPriority.Medium ? "#000" : "#fff",
             priority = (int)t.Priority,
             dueDate = t.DueDate,
+            isCompleted = t.IsCompleted,
             difficultyScore = t.DifficultyScore,
             difficultyReason = string.IsNullOrEmpty(t.DifficultyReason) ? "Planlanmış standart görev." : t.DifficultyReason
         });
@@ -93,11 +97,25 @@ public class DashboardController : Controller
 
     [HttpPost]
     [IgnoreAntiforgeryToken]
-    public async Task<IActionResult> SaveFeedback([FromBody] FeedbackSaveRequest request)
+    public async Task<IActionResult> SaveFeedback([FromForm] string content, IFormFile? image)
     {
-        if (string.IsNullOrWhiteSpace(request?.Content))
+        if (string.IsNullOrWhiteSpace(content))
             return Json(new { success = false });
-        await _dataService.SaveFeedbackAsync(request.Content);
+
+        string? imagePath = null;
+        if (image != null && image.Length > 0)
+        {
+            var fileName = Guid.NewGuid().ToString() + Path.GetExtension(image.FileName);
+            var filePath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot/uploads/notes", fileName);
+            Directory.CreateDirectory(Path.GetDirectoryName(filePath)!);
+            using (var stream = new FileStream(filePath, FileMode.Create))
+            {
+                await image.CopyToAsync(stream);
+            }
+            imagePath = "/uploads/notes/" + fileName;
+        }
+
+        await _dataService.SaveFeedbackAsync(content, imagePath);
         return Json(new { success = true });
     }
 
@@ -106,7 +124,7 @@ public class DashboardController : Controller
     public async Task<IActionResult> GetFeedbacks()
     {
         var notes = await _dataService.GetFeedbacksAsync();
-        return Json(notes.Select(n => new { n.Id, n.Content, n.CreatedAt }));
+        return Json(notes.Select(n => new { n.Id, n.Content, n.CreatedAt, n.ImagePath }));
     }
 
     [HttpPost]
@@ -307,6 +325,23 @@ public class DashboardController : Controller
         await _dataService.AddFileAsync(uploadedFile);
 
         return Json(new { success = true, fileId = uploadedFile.Id, fileName = uploadedFile.FileName });
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> UploadTransientFile(IFormFile file)
+    {
+        if (file == null || file.Length == 0) return Json(new { success = false });
+
+        var fileName = "temp_" + Guid.NewGuid().ToString() + Path.GetExtension(file.FileName);
+        var filePath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot/uploads/temp", fileName);
+        Directory.CreateDirectory(Path.GetDirectoryName(filePath)!);
+
+        using (var stream = new FileStream(filePath, FileMode.Create))
+        {
+            await file.CopyToAsync(stream);
+        }
+
+        return Json(new { success = true, filePath = "/uploads/temp/" + fileName, fileName = file.FileName });
     }
 
     private string ReadPdfContent(string filePath)
@@ -725,6 +760,19 @@ public class DashboardController : Controller
             contextFiles = contextFiles.Distinct().ToList();
         }
 
+        if (request.TransientPaths != null && request.TransientPaths.Any())
+        {
+            foreach (var path in request.TransientPaths)
+            {
+                contextFiles.Add(new UploadedFile 
+                { 
+                    FilePath = path, 
+                    FileName = Path.GetFileName(path),
+                    Type = path.EndsWith(".webm") ? ResourceType.Audio : ResourceType.Image 
+                });
+            }
+        }
+
         // Build real-time schedule context (Turkey time)
         var turkeyTz = TimeZoneInfo.FindSystemTimeZoneById(
             OperatingSystem.IsWindows() ? "Turkey Standard Time" : "Europe/Istanbul");
@@ -946,6 +994,7 @@ public class DashboardController : Controller
         public string Message { get; set; } = string.Empty;
         public string? SessionId { get; set; }
         public List<string> ContextFileIds { get; set; } = new List<string>();
+        public List<string> TransientPaths { get; set; } = new List<string>();
     }
 
     public class DriveImportModel

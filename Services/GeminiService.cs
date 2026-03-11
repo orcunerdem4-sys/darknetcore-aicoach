@@ -36,7 +36,8 @@ Return a JSON object with these fields:
 
 Example JSON: {{ ""topic"": ""Biology"", ""complexityScore"": 7, ""wordCount"": 5000, ""estimatedHours"": 2.5, ""summary"": ""Covers cellular respiration process."" }}";
 
-        var response = await CallGeminiRestAsync(prompt, new List<(string role, string text)>());
+        var contents = new List<object> { new { role = "user", parts = new[] { new { text = prompt } } } };
+        var response = await CallGeminiRawAsync(contents);
         return ParseGeminiJson<GeminiAnalysisResult>(response);
     }
 
@@ -82,7 +83,7 @@ Example JSON: {{ ""topic"": ""Biology"", ""complexityScore"": 7, ""wordCount"": 
         var filesToShow = allFiles?.Where(f => f.Type != ResourceType.Folder).ToList();
         if (filesToShow != null && filesToShow.Any())
         {
-            sb.AppendLine("� Kullanıcının Tüm Yüklü Dosyaları:");
+            sb.AppendLine(" Kullanıcının Tüm Yüklü Dosyaları:");
             foreach (var f in filesToShow)
             {
                 sb.Append($"  • [{f.Type}] {f.FileName}");
@@ -124,95 +125,64 @@ Example JSON: {{ ""topic"": ""Biology"", ""complexityScore"": 7, ""wordCount"": 
 
         var systemPrompt = sb.ToString();
 
-        // Build conversation turns from history
-        var turns = new List<(string role, string text)>();
-        turns.Add(("user", systemPrompt)); // Inject system context as first user turn
-        turns.Add(("model", "Anlaşıldı! Tüm dosyalarını ve ders programını inceledim. Sana nasıl yardımcı olabilirim?"));
+        // Build contents array for multimodal input
+        var contentsList = new List<object>();
 
+        // 1. System Prompt
+        contentsList.Add(new { role = "user", parts = new[] { new { text = systemPrompt } } });
+        contentsList.Add(new { role = "model", parts = new[] { new { text = "Anlaşıldı! Sana yardımcı olmaya hazırım." } } });
+
+        // 2. History
         if (history != null)
         {
-            foreach (var msg in history.OrderBy(m => m.SentAt))
+            foreach (var h in history.OrderBy(m => m.SentAt))
             {
-                var role = msg.Role == "assistant" ? "model" : "user";
-                turns.Add((role, msg.Content));
+                contentsList.Add(new { role = h.Role == "assistant" ? "model" : "user", parts = new[] { new { text = h.Content } } });
             }
         }
 
-        return await CallGeminiRestAsync(userMessage, turns);
+        // 3. Current Turn with Multimodal Context
+        var currentParts = new List<object>();
+        currentParts.Add(new { text = userMessage });
+
+        foreach (var file in contextFiles)
+        {
+            var extension = Path.GetExtension(file.FileName).ToLower();
+            string? mimeType = extension switch { ".jpg" or ".jpeg" => "image/jpeg", ".png" => "image/png", ".webp" => "image/webp", ".webm" => "audio/webm", _ => null };
+
+            if (mimeType != null && !string.IsNullOrEmpty(file.FilePath))
+            {
+                var fullPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", file.FilePath.TrimStart('/'));
+                if (System.IO.File.Exists(fullPath))
+                {
+                    var base64 = Convert.ToBase64String(await System.IO.File.ReadAllBytesAsync(fullPath));
+                    currentParts.Add(new { inline_data = new { mime_type = mimeType, data = base64 } });
+                }
+            }
+        }
+
+        contentsList.Add(new { role = "user", parts = currentParts.ToArray() });
+
+        return await CallGeminiRawAsync(contentsList);
     }
 
-    private async Task<string> CallGeminiRestAsync(string userMessage, List<(string role, string text)> history)
+    private async Task<string> CallGeminiRawAsync(List<object> contents)
     {
         try
         {
-            Console.WriteLine($"[Gemini] Sending to {ModelName} with {history.Count} history turns...");
-
             var url = $"https://generativelanguage.googleapis.com/v1beta/models/{ModelName}:generateContent?key={_apiKey}";
-
-            // Build contents array from history + current message
-            var contentsList = new List<object>();
-            foreach (var (role, text) in history)
-            {
-                contentsList.Add(new
-                {
-                    role,
-                    parts = new[] { new { text } }
-                });
-            }
-            // Add current user message
-            contentsList.Add(new
-            {
-                role = "user",
-                parts = new[] { new { text = userMessage } }
-            });
-
-            var requestBody = new
-            {
-                contents = contentsList,
-                generationConfig = new
-                {
-                    temperature = 0.7,
-                    maxOutputTokens = 8192
-                }
-            };
-
-            var jsonContent = new StringContent(
-                JsonSerializer.Serialize(requestBody),
-                Encoding.UTF8,
-                "application/json");
+            var requestBody = new { contents, generationConfig = new { temperature = 0.7, maxOutputTokens = 8192 } };
+            var jsonContent = new StringContent(JsonSerializer.Serialize(requestBody), Encoding.UTF8, "application/json");
 
             var response = await _httpClient.PostAsync(url, jsonContent);
             var responseString = await response.Content.ReadAsStringAsync();
 
-            if (!response.IsSuccessStatusCode)
-            {
-                Console.WriteLine($"[Gemini] API ERROR: {response.StatusCode} - {responseString}");
-
-                if (response.StatusCode == System.Net.HttpStatusCode.TooManyRequests)
-                    return "⚠️ **Servis Yoğunluğu:** Lütfen 1 dakika bekleyin. (429)";
-
-                if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
-                    return $"⚠️ **Model Hatası:** '{ModelName}' bulunamadı. (404)";
-
-                return $"⚠️ **API Hatası:** {response.StatusCode}";
-            }
+            if (!response.IsSuccessStatusCode) return $"⚠️ API Hatası: {response.StatusCode} - {responseString}";
 
             var jsonDocument = JsonDocument.Parse(responseString);
-            var textResult = jsonDocument.RootElement
-                .GetProperty("candidates")[0]
-                .GetProperty("content")
-                .GetProperty("parts")[0]
-                .GetProperty("text").GetString();
-
-            return string.IsNullOrEmpty(textResult)
-                ? "⚠️ Yanıt boş döndü."
-                : textResult;
+            return jsonDocument.RootElement.GetProperty("candidates")[0].GetProperty("content").GetProperty("parts")[0].GetProperty("text").GetString() ?? "";
         }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"[Gemini] EXCEPTION: {ex.Message}");
-            return $"⚠️ **Hata:** {ex.Message}";
-        }
+        catch (Exception ex) { return $"⚠️ Hata: {ex.Message}"; }
     }
 
     private T? ParseGeminiJson<T>(string rawText) where T : class

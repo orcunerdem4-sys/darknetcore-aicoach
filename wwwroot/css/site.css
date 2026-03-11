@@ -94,12 +94,11 @@ a {
 
 .nav-link:hover,
 .nav-link.active {
-    color: var(--accent-primary);
-    background: #ecfdf5;
+    color: var(--accent-primary) !important;
 }
 
 .nav-link.active {
-    font-weight: 600;
+    font-weight: 700;
 }
 
 /* Buttons */

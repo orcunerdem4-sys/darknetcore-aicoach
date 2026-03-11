@@ -16,71 +16,54 @@ document.addEventListener('DOMContentLoaded', function () {
         expandRows: true,
         height: 'auto',
         contentHeight: 600,
-        // Boş bir yere (veya gün aralığına) tıklandğında
+        longPressDelay: 350, // Mobile touch support
         select: function (info) {
-            // "Zamanı" (info.startStr) taskDate inputuna doldur ve modal'ı manuel göster
             const dateInput = document.getElementById('taskDate');
             if (dateInput) {
-                // Remove time part if it's allDay to prevent "invalid date" on datetime-local
                 let defaultDate = info.startStr;
                 if (!info.startStr.includes("T")) {
                     defaultDate += "T09:00"; // default time
                 }
-                dateInput.value = defaultDate.substring(0, 16); // format: YYYY-MM-DDTHH:mm
+                dateInput.value = defaultDate.substring(0, 16);
             }
             var myModal = new bootstrap.Modal(document.getElementById('addTaskModal'));
             myModal.show();
         },
-        // Görevin üzerine fare ile gelince (X Butonu - Delete)
-        eventMouseEnter: function (info) {
-            const el = info.el;
-            if (el.querySelector('.fc-event-delete-btn')) return;
+        eventClick: function (info) {
+            // Fill detail modal
+            document.getElementById('taskDetailTitle').textContent = info.event.title;
+            const dateStr = info.event.start.toLocaleString();
+            document.getElementById('taskDetailDate').textContent = dateStr;
+            
+            const statusBadge = document.getElementById('taskDetailStatus');
+            const isCompleted = info.event.extendedProps.isCompleted;
+            statusBadge.textContent = isCompleted ? 'Tamamlandı' : 'Devam Ediyor';
+            statusBadge.className = `badge ${isCompleted ? 'bg-success-subtle text-success' : 'bg-secondary-subtle text-secondary'}`;
 
-            const btn = document.createElement('span');
-            btn.className = 'fc-event-delete-btn bg-danger text-white rounded-circle d-flex align-items-center justify-content-center cursor-pointer shadow-sm';
-            btn.innerHTML = '×';
-            btn.style.position = 'absolute';
-            btn.style.top = '-5px';
-            btn.style.right = '-5px';
-            btn.style.width = '20px';
-            btn.style.height = '20px';
-            btn.style.fontSize = '16px';
-            btn.style.fontWeight = 'bold';
-            btn.style.lineHeight = '1';
-            btn.style.zIndex = '1000';
-            btn.title = 'Sil';
+            // Completion toggle
+            const completeBtn = document.getElementById('taskDetailCompleteBtn');
+            completeBtn.onclick = () => {
+                toggleTaskComplete(info.event.id, !isCompleted);
+            };
+            completeBtn.textContent = isCompleted ? '↩️ Devam Ediyor İşaretle' : '✅ Tamamlandı İşaretle';
 
-            btn.onclick = function (e) {
-                e.stopPropagation(); // Prevent event Click wrapper
-                if (confirm(`'${info.event.title}' görevini takvimden silmek istediğine emin misin?`)) {
-                    fetch('/Dashboard/DeleteTask/' + info.event.id, {
-                        method: 'POST'
-                    })
-                        .then(response => {
-                            if (response.ok) {
-                                calendar.refetchEvents();
+            // Deletion logic
+            const deleteBtn = document.getElementById('taskDetailDeleteBtn');
+            deleteBtn.onclick = () => {
+                if (confirm(`'${info.event.title}' görevini silmek istediğine emin misin?`)) {
+                    fetch('/Dashboard/DeleteTask/' + info.event.id, { method: 'POST' })
+                        .then(r => {
+                            if (r.ok) {
+                                info.event.remove();
                                 loadTaskList();
                                 window.showToast("Görev silindi.");
-                            } else {
-                                window.showToast("Görev silinirken hata oluştu!", "error");
                             }
                         });
                 }
             };
-            el.appendChild(btn);
-        },
-        // Fareden çıkınca X butonunu kaldır
-        eventMouseLeave: function (info) {
-            const btn = info.el.querySelector('.fc-event-delete-btn');
-            if (btn) {
-                // Silme butonunun üzerine gezinilirken de (örneğin buton sınırı taşmışsa) kapanmaması için gecikme/veya DOM'dan silme
-                // Fakat pratiklik için doğrudan kaldırıyoruz
-                btn.remove();
-            }
-        },
-        // Göreve tıklanınca detay popup göster
-        eventClick: function (info) {
-            // ... (rest remains same)
+
+            var myModal = new bootstrap.Modal(document.getElementById('taskDetailModal'));
+            myModal.show();
         },
         windowResize: function(view) {
             if (window.innerWidth < 768) {

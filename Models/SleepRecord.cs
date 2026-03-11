@@ -1,3 +1,5 @@
+using System.ComponentModel.DataAnnotations.Schema;
+
 namespace DarkNetCore.Models;
 
 public class SleepRecord
@@ -10,6 +12,7 @@ public class SleepRecord
     public DateTime SleepEnd { get; set; }
     public double TotalHours => (SleepEnd - SleepStart).TotalHours;
 
-    public int QualityScore { get; set; } = 5; // 1 to 10
+    [Column("QualityScore")]
+    public int SleepTarget { get; set; } = 8; // Default goal is 8 hours
     public string Notes { get; set; } = string.Empty;
 }

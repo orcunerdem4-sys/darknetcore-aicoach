@@ -29,7 +29,7 @@ public class AccountController : Controller
     }
 
     [HttpPost]
-    public async Task<IActionResult> Login(string username, string password, string? returnUrl = null)
+    public async Task<IActionResult> Login(string username, string password, bool rememberMe = false, string? returnUrl = null)
     {
         ViewData["ReturnUrl"] = returnUrl;
         if (string.IsNullOrEmpty(username) || string.IsNullOrEmpty(password))
@@ -53,7 +53,10 @@ public class AccountController : Controller
             await HttpContext.SignInAsync(
                 CookieAuthenticationDefaults.AuthenticationScheme,
                 new ClaimsPrincipal(claimsIdentity),
-                new AuthenticationProperties { IsPersistent = true, ExpiresUtc = DateTimeOffset.UtcNow.AddDays(30) });
+                new AuthenticationProperties { 
+                    IsPersistent = rememberMe, 
+                    ExpiresUtc = DateTimeOffset.UtcNow.AddDays(30) 
+                });
 
             TempData["SuccessMessage"] = "Başarıyla giriş yapıldı!";
             return RedirectToLocal(returnUrl);

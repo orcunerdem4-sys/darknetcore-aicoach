@@ -256,14 +256,15 @@
 
         <!-- Input Area -->
         <div class="chat-input-area">
+            <div id="attachedMediaPreview" class="d-flex gap-2 mb-2 flex-wrap"></div>
             <div class="input-pill-container" id="inputPillContainer">
                 <button type="button" class="input-action-btn" id="attachBtn" title="Dosya Ekle">
                     <i data-lucide="plus" size="20"></i>
                 </button>
-                <input type="file" id="chatFileInput" class="d-none" />
+                <input type="file" id="chatFileInput" class="d-none" accept="image/*" />
                 
                 <textarea id="chatInput" class="form-control" rows="1"
-                    placeholder="Dopamind'a bir şey sor..."
+                    placeholder="Dopamind'a bir şey sor (Görsel yapıştırın veya sürükleyin)..."
                     style="resize:none; max-height:150px;"></textarea>
                 
                 <button type="button" class="input-action-btn" id="voiceBtn" title="Sesli Mesaj">
@@ -312,49 +313,86 @@
     const attachBtn = document.getElementById('attachBtn');
     const chatFileInput = document.getElementById('chatFileInput');
     const contextInfo = document.getElementById('contextInfo');
+    const mediaPreview = document.getElementById('attachedMediaPreview');
     const newChatBtn = document.getElementById('newChatBtn');
 
     let attachedFileIds = [];
+    let transientPaths = [];
 
     if (chatMessages) {
         chatMessages.scrollTop = chatMessages.scrollHeight;
     }
 
+    // Universal Image Capture Support
+    chatInput.addEventListener('paste', (e) => {
+        const items = (e.clipboardData || e.originalEvent.clipboardData).items;
+        for (let i = 0; i < items.length; i++) {
+            if (items[i].type.indexOf('image') !== -1) {
+                const blob = items[i].getAsFile();
+                uploadTransient(blob);
+            }
+        }
+    });
+
+    chatInput.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        chatInput.style.borderColor = 'var(--accent-primary)';
+    });
+    chatInput.addEventListener('dragleave', () => {
+        chatInput.style.borderColor = '';
+    });
+    chatInput.addEventListener('drop', (e) => {
+        e.preventDefault();
+        chatInput.style.borderColor = '';
+        if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+            const file = e.dataTransfer.files[0];
+            if (file.type.startsWith('image/')) {
+                uploadTransient(file);
+            }
+        }
+    });
+
+    async function uploadTransient(file) {
+        const formData = new FormData();
+        formData.append('file', file);
+        try {
+            const res = await fetch('/Dashboard/UploadTransientFile', { method: 'POST', body: formData });
+            const data = await res.json();
+            if (data.success) {
+                transientPaths.push(data.filePath);
+                renderMediaPreview(data.filePath, data.fileName);
+            }
+        } catch (e) { console.error('Upload error', e); }
+    }
+
+    function renderMediaPreview(path, name) {
+        const div = document.createElement('div');
+        div.className = 'position-relative';
+        div.style.width = '50px';
+        div.style.height = '50px';
+        
+        const isAudio = path.endsWith('.webm');
+        const content = isAudio 
+            ? `<div class="bg-secondary rounded d-flex align-items-center justify-content-center w-100 h-100 text-white"><i data-lucide="mic" size="16"></i></div>`
+            : `<img src="${path}" class="rounded w-100 h-100 object-fit-cover shadow-sm border">`;
+            
+        div.innerHTML = `${content}
+            <button onclick="removeTransient('${path}', this)" class="btn btn-danger btn-sm p-0 rounded-circle position-absolute" style="top:-5px; right:-5px; width:18px; height:18px; line-height:1;">&times;</button>`;
+        mediaPreview.appendChild(div);
+        lucide.createIcons();
+    }
+
+    window.removeTransient = function(path, btn) {
+        transientPaths = transientPaths.filter(p => p !== path);
+        btn.parentElement.remove();
+    }
+
     // Attach File Logic
     if(attachBtn && chatFileInput) {
         attachBtn.addEventListener('click', () => chatFileInput.click());
-
-        chatFileInput.addEventListener('change', async function() {
-            if (!this.files.length) return;
-            const file = this.files[0];
-            
-            const formData = new FormData();
-            formData.append('file', file);
-            
-            contextInfo.textContent = 'Yükleniyor...';
-            attachBtn.disabled = true;
-
-            try {
-                const res = await fetch('/Dashboard/UploadFileAjax', {
-                    method: 'POST',
-                    body: formData
-                });
-                const data = await res.json();
-                
-                if (data.success) {
-                    attachedFileIds.push(data.fileId);
-                    contextInfo.textContent = data.fileName + ' eklendi ✅';
-                } else {
-                    alert('Yükleme hatası: ' + data.message);
-                    contextInfo.textContent = 'Hata oluştu';
-                }
-            } catch (e) {
-                alert('Hata: ' + e.message);
-                contextInfo.textContent = 'Hata oluştu';
-            }
-            
-            attachBtn.disabled = false;
-            this.value = ''; // reset
+        chatFileInput.addEventListener('change', function() {
+            if (this.files.length) uploadTransient(this.files[0]);
+            this.value = '';
         });
     }
 
@@ -541,39 +579,17 @@
                     mediaRecorder = new MediaRecorder(stream);
                     audioChunks = [];
 
-                    mediaRecorder.ondataavailable = (event) => {
-                        audioChunks.push(event.data);
-                    };
-
+                    mediaRecorder.ondataavailable = (event) => audioChunks.push(event.data);
                     mediaRecorder.onstop = async () => {
                         const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
-                        const formData = new FormData();
-                        formData.append('file', audioBlob, 'voice_message.webm');
-
-                        contextInfo.textContent = 'Ses yükleniyor...';
-                        try {
-                            const res = await fetch('/Dashboard/UploadFileAjax', {
-                                method: 'POST',
-                                body: formData
-                            });
-                            const data = await res.json();
-                            if (data.success) {
-                                attachedFileIds.push(data.fileId);
-                                contextInfo.textContent = 'Sesli mesaj eklendi 🎤';
-                            }
-                        } catch (e) {
-                            contextInfo.textContent = 'Ses yükleme hatası';
-                        }
+                        uploadTransient(audioBlob);
                     };
 
                     mediaRecorder.start();
                     isRecording = true;
                     micIcon.classList.add('recording-pulse');
                     inputPillContainer.classList.add('recording-active');
-                    contextInfo.textContent = 'Kaydediliyor...';
-                } catch (err) {
-                    alert('Mikrofon erişimi reddedildi veya bulunamadı.');
-                }
+                } catch (err) { alert('Mikrofon erişimi reddedildi.'); }
             } else {
                 mediaRecorder.stop();
                 mediaRecorder.stream.getTracks().forEach(track => track.stop());
@@ -654,10 +670,9 @@
 
     async function sendMessage() {
         const msg = chatInput.value.trim();
-        if (!msg && attachedFileIds.length === 0) return;
+        if (!msg && transientPaths.length === 0 && attachedFileIds.length === 0) return;
 
-        const displayMsg = msg || (attachedFileIds.length > 0 ? "🎤 Sesli mesaj/dosya eklendi" : "");
-        appendMessage('user', displayMsg);
+        appendMessage('user', msg || (transientPaths.some(p => p.endsWith('.webm')) ? "🎤 Sesli mesaj gönderildi" : "📷 Görsel gönderildi"));
         chatInput.value = '';
         chatInput.style.height = 'auto';
 
@@ -672,7 +687,8 @@
                 body: JSON.stringify({
                     message: msg,
                     sessionId: getSessionId(),
-                    contextFileIds: attachedFileIds
+                    contextFileIds: attachedFileIds,
+                    transientPaths: transientPaths
                 })
             });
             const data = await response.json();
@@ -680,7 +696,6 @@
             if (data.success) {
                 const assistantMsg = appendMessage('assistant', data.response);
                 renderCommandButtons(assistantMsg.querySelector('.bubble-content'));
-                // Always update session id (first message creates it)
                 if (data.sessionId) {
                     sessionIdInput.value = data.sessionId;
                     history.replaceState(null, '', '/Dashboard/Chat?sessionId=' + data.sessionId);
@@ -688,9 +703,11 @@
             } else {
                 appendMessage('assistant', '⚠️ ' + (data.response || 'Bir hata oluştu.'));
             }
-            // Reset attached files after successful send
+            // Reset media after send
             attachedFileIds = [];
-            contextInfo.textContent = 'Yok';
+            transientPaths = [];
+            mediaPreview.innerHTML = '';
+            contextInfo.textContent = '';
         } catch (e) {
             typingIndicator.classList.add('d-none');
             appendMessage('assistant', '⚠️ Bağlantı hatası: ' + e.message);

@@ -60,14 +60,6 @@
             <div class="glass-panel p-4 h-100">
                 <div class="d-flex justify-content-between align-items-center mb-4">
                     <h4 class="mb-0"><i data-lucide="calendar" class="me-2"></i>Schedule</h4>
-                    <div class="d-flex gap-2">
-                        <a asp-action="Files" class="btn btn-sm btn-outline-info">
-                            <i data-lucide="folder" class="me-1"></i> Files
-                        </a>
-                        <button class="btn btn-sm btn-outline-primary" id="optimizeScheduleBtn">
-                            <i data-lucide="sparkles" class="me-1"></i> Smart Schedule
-                        </button>
-                    </div>
                 </div>
                 <div id="calendar"></div>
             </div>
@@ -91,8 +83,20 @@
                     </div>
                     <div class="summary-mini-card p-2 rounded flex-fill text-center position-relative">
                         <div class="text-indigo mb-1"><i data-lucide="moon" size="20" style="color: #4f46e5;"></i></div>
-                        <h5 class="mb-0 fw-bold">@avgSleep</h5>
+                        <h5 class="mb-0 fw-bold">@avgSleep Saat</h5>
                         <small class="text-muted" style="font-size: 0.7rem;">Ort. Uyku</small>
+                        
+                        @{
+                            var latestSleep = sleepRecords?.OrderByDescending(s => s.SleepEnd).FirstOrDefault();
+                            var sleepGoal = latestSleep?.SleepTarget ?? 8;
+                            var sleepPercent = sleepGoal > 0 ? Math.Min(100, (int)((avgSleep / sleepGoal) * 100)) : 0;
+                            var progressColor = sleepPercent >= 100 ? "bg-success" : sleepPercent >= 75 ? "bg-info" : "bg-warning";
+                        }
+                        <div class="progress mt-2" style="height: 6px;" title="Hedef: @sleepGoal Saat">
+                            <div class="progress-bar @progressColor" role="progressbar" style="width: @sleepPercent%" aria-valuenow="@sleepPercent" aria-valuemin="0" aria-valuemax="100"></div>
+                        </div>
+                        <small class="text-muted d-block mt-1" style="font-size: 0.6rem;">Hedef: @sleepGoal s</small>
+
                         <!-- Hızlı uyku ekleme butonu -->
                         <button class="btn btn-sm btn-link p-0 position-absolute top-0 end-0 m-1" data-bs-toggle="modal" data-bs-target="#addSleepModal" title="Uyku Ekle">
                             <i data-lucide="plus-circle" size="14" style="color: #4f46e5;"></i>
@@ -111,32 +115,49 @@
                 </div>
             </div>
 
-            <!-- AI Chat Widget -->
-            <div class="glass-panel p-3" style="height: 350px; display: flex; flex-direction: column;">
-                <div class="d-flex justify-content-between align-items-center mb-2">
-                    <h6 class="mb-0"><i data-lucide="bot" class="me-2"></i>AI Assistant</h6>
-                    <div class="d-flex align-items-center gap-2">
-                        <span class="badge bg-success-subtle text-success">Online</span>
-                        <a asp-action="Chat" class="btn btn-sm btn-outline-primary" title="Tam ekranı aç" style="padding:2px 8px;">
-                            <i data-lucide="maximize-2" size="12"></i>
-                        </a>
-                    </div>
+            <!-- Materyaller & Otomasyon Paneli -->
+            <div class="glass-panel p-4 d-flex flex-column" style="min-height: 300px;">
+                <h5 class="mb-3 d-flex justify-content-between align-items-center fw-bold">
+                    <span><i data-lucide="box" class="me-2 text-primary"></i>Materyaller & Araçlar</span>
+                </h5>
+                
+                <div class="d-flex gap-2 mb-3">
+                    <a asp-action="Files" class="btn btn-sm btn-outline-info flex-fill fw-bold">
+                        <i data-lucide="folder" class="me-1"></i> Dosyalarım
+                    </a>
+                    <button class="btn btn-sm btn-outline-primary flex-fill fw-bold" id="optimizeScheduleBtn">
+                        <i data-lucide="zap" class="me-1"></i> Akıllı Planla
+                    </button>
                 </div>
-                <div id="chatMessages" class="flex-grow-1 border rounded p-2 mb-2" style="overflow-y: auto; font-size: 0.9rem;">
-                    <div class="text-secondary text-center mt-4">
-                        <small>Ask me to reorganize your schedule or summarize tasks.</small>
-                    </div>
-                </div>
-                <!-- Typing Indicator -->
-                <div id="chatTypingIndicator" class="text-muted small ms-2 mb-2 d-none">
-                    <i data-lucide="loader-2" class="me-1 animate-spin"></i> Thinking...
-                </div>
-                <div class="input-group input-group-sm">
-                    <input type="text" class="form-control custom-input" placeholder="Type a command..." id="chatInput">
-                    <button class="btn btn-primary" type="button" id="chatSendBtn"><i data-lucide="send" size="16"></i></button>
+
+                <h6 class="mb-2 text-dark fw-bold" style="font-size: 0.9rem;">Son Eklenenler</h6>
+                <div class="materials-list list-group list-group-flush flex-grow-1 overflow-auto" style="max-height: 200px;">
+                    @if (ViewBag.RecentFiles != null && ((IEnumerable<UploadedFile>)ViewBag.RecentFiles).Any())
+                    {
+                        foreach (var file in (IEnumerable<UploadedFile>)ViewBag.RecentFiles)
+                        {
+                            var icon = file.Type == ResourceType.Video ? "youtube" : 
+                                       file.Type == ResourceType.Link ? "link" : 
+                                       file.Type == ResourceType.Image ? "image" : "file-text";
+                            var colorClass = file.Type == ResourceType.Video ? "text-danger" : 
+                                             file.Type == ResourceType.Link ? "text-warning" : "text-primary";
+                            var target = string.IsNullOrEmpty(file.Url) ? file.FilePath : file.Url;
+
+                            <a href="@target" target="_blank" class="list-group-item list-group-item-action d-flex align-items-center py-2 px-0 border-0 bg-transparent">
+                                <i data-lucide="@icon" class="@colorClass me-2" size="16"></i>
+                                <span class="text-truncate small flex-grow-1" style="color: var(--text-main);">@file.FileName</span>
+                                <i data-lucide="external-link" class="text-secondary opacity-50 ms-2" size="12"></i>
+                            </a>
+                        }
+                    }
+                    else
+                    {
+                        <div class="text-center py-3 text-muted small opacity-50">Henüz materyal yok.</div>
+                    }
                 </div>
             </div>
 
+            </div>
         </div>
     </div>
 </div>
@@ -201,9 +222,9 @@
                         </div>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label text-secondary small fw-bold mb-1">Uyku Kalitesi (1-10)</label>
-                        <input type="range" class="form-range" min="1" max="10" name="QualityScore" id="sleepQuality" value="5" oninput="document.getElementById('qualityVal').innerText = this.value">
-                        <div class="text-center fw-bold" id="qualityVal">5</div>
+                        <label class="form-label text-secondary small fw-bold mb-1">Günlük Uyku Hedefi (Saat)</label>
+                        <input type="range" class="form-range" min="4" max="12" step="1" name="SleepTarget" id="sleepTarget" value="8" oninput="document.getElementById('targetVal').innerText = this.value + ' Saat'">
+                        <div class="text-center fw-bold" id="targetVal">8 Saat</div>
                     </div>
                     <button type="submit" class="btn btn-primary w-100 py-2 fw-bold" style="border-radius: 12px; background-color: #4b0082; border-color: #4b0082;">Kaydet</button>
                 </form>
