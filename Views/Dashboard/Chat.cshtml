@@ -104,7 +104,7 @@
         #chatMessages { padding: 16px 12px; }
         .chat-bubble { max-width: 92%; }
         .bubble-content { font-size: 1rem; }
-        .chat-input-area { padding: 8px 12px 12px 12px; }
+        .chat-input-area { padding: 8px 12px 100px 12px; } /* Increased bottom padding for nav bar */
         .input-pill-container { min-height: 48px; }
     }
     @@media (min-width: 768px) { #sidebarToggleBtn { display: none !important; } }
@@ -135,6 +135,22 @@
     }
     .session-item span { color: var(--text-main) !important; font-weight: 500; }
     .session-item .text-secondary { color: var(--text-muted) !important; font-size: 0.85rem; }
+
+    /* AI Command & Approval Buttons */
+    .ai-command-container { margin-top: 12px; display: flex; gap: 8px; flex-wrap: wrap; }
+    .btn-approval { padding: 8px 16px; border-radius: 12px; font-size: 0.9rem; font-weight: 600; cursor: pointer; transition: all 0.2s; border: 1px solid var(--border-dim); display: flex; align-items: center; gap: 6px; }
+    .btn-approve { background: var(--accent-green); color: white; border: none; }
+    .btn-approve:hover { background: #047857; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(5, 150, 105, 0.2); }
+    .btn-reject { background: var(--bg-card); color: var(--text-muted); }
+    .btn-reject:hover { background: #fee2e2; color: #ef4444; border-color: #fecaca; }
+    
+    /* File Preview Bubble/Modal */
+    .file-preview-link { cursor: pointer; color: var(--accent-green); text-decoration: underline; font-weight: 500; }
+    #filePreviewModal { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 2000; width: 90%; max-width: 400px; background: var(--bg-header); border: 1px solid var(--border-dim); border-radius: 20px; box-shadow: 0 10px 40px rgba(0,0,0,0.3); padding: 20px; display: none; }
+    #filePreviewModal.open { display: block; animation: fadeIn 0.2s ease; }
+    .preview-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+    .preview-body { font-size: 0.9rem; overflow-wrap: break-word; }
+    .preview-summary { background: var(--bg-input); padding: 10px; border-radius: 10px; margin-top: 10px; max-height: 200px; overflow-y: auto; }
 
     /* Scrollbar Polish */
     #chatMessages::-webkit-scrollbar { width: 6px; }
@@ -265,6 +281,23 @@
     </div>
 </div>
 
+<!-- File Preview Modal -->
+<div id="filePreviewModal">
+    <div class="preview-header">
+        <h6 id="previewFileName" class="mb-0 fw-bold">Dosya Önizleme</h6>
+        <button class="btn-close" onclick="closeFilePreview()"></button>
+    </div>
+    <div class="preview-body">
+        <div class="d-flex justify-content-between mb-2">
+            <span class="text-muted small">Tür: <span id="previewFileType" class="text-dark"></span></span>
+            <span class="text-muted small" id="previewFileDate"></span>
+        </div>
+        <div class="preview-summary" id="previewFileSummary">
+            İçerik analiz ediliyor...
+        </div>
+    </div>
+</div>
+
 <input type="hidden" id="currentSessionId" value="@currentSessionId" />
 
 
@@ -325,13 +358,16 @@
         });
     }
 
-    // Configure marked to open links in new tab and use custom rendering
-    // NOTE: marked v5+ uses token objects instead of individual string args
+    // Configure marked for custom rendering
     const renderer = {
         link(token) {
             const href = token.href || '';
             const title = token.title || '';
             const text = token.text || '';
+            // If the link looks like a file ID (e.g. from our system)
+            if (href.startsWith('file-')) {
+                return `<span class="file-preview-link" onclick="showFilePreview('${href.substring(5)}')"><i data-lucide="file" size="14"></i> ${text}</span>`;
+            }
             let isDoc = href.toLowerCase().includes('pdf') || href.toLowerCase().includes('doc') || text.toLowerCase().includes('dosya') || text.toLowerCase().includes('belge');
             let icon = isDoc ? '<i data-lucide="file-text" size="16"></i>' : '<i data-lucide="external-link" size="16"></i>';
             return `<a href="${href}" title="${title}" target="_blank" rel="noopener noreferrer" class="ai-custom-link-btn">${icon}<span>${text}</span></a>`;
@@ -366,7 +402,86 @@
     // Render existing markdown messages on load
     document.querySelectorAll('.bubble-content[data-markdown]').forEach(el => {
         el.innerHTML = marked.parse(el.dataset.markdown || el.textContent);
+        renderCommandButtons(el);
     });
+
+    function renderCommandButtons(parent) {
+        parent.querySelectorAll('.ai-command-container').forEach(container => {
+            if (container.children.length > 0) return;
+            const cmdData = container.dataset.command;
+            const cmd = JSON.parse(cmdData);
+            
+            if (cmd.command === 'add_task') {
+                container.innerHTML = `
+                    <button class="btn-approval btn-approve" onclick='confirmTask(this, ${JSON.stringify(cmdData)})'>
+                        <i data-lucide="check" size="16"></i> Onayla
+                    </button>
+                    <button class="btn-approval btn-reject" onclick='rejectTask(this)'>
+                        <i data-lucide="x" size="16"></i> Reddet
+                    </button>
+                `;
+                lucide.createIcons({ props: { size: 16 } });
+            }
+        });
+    }
+
+    async function confirmTask(btn, cmdJson) {
+        const container = btn.closest('.ai-command-container');
+        btn.innerHTML = '<i class="spinner-border spinner-border-sm"></i> Bekleyin...';
+        btn.disabled = true;
+        
+        try {
+            const res = await fetch('/Dashboard/ExecuteAiCommand', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: cmdJson
+            });
+            const data = await res.json();
+            if (data.success) {
+                container.innerHTML = `<span class="text-success small fw-bold"><i data-lucide="check-circle" size="14"></i> Görev Takvime Eklendi</span>`;
+                lucide.createIcons();
+            } else {
+                alert(data.message);
+                btn.disabled = false;
+                btn.textContent = 'Tekrar Dene';
+            }
+        } catch (e) {
+            alert('Hata: ' + e.message);
+            btn.disabled = false;
+        }
+    }
+
+    function rejectTask(btn) {
+        const container = btn.closest('.ai-command-container');
+        container.innerHTML = `<span class="text-muted small italic">Plan reddedildi.</span>`;
+    }
+
+    async function showFilePreview(fileId) {
+        const modal = document.getElementById('filePreviewModal');
+        const overlay = document.getElementById('sidebarDimOverlay');
+        
+        modal.classList.add('open');
+        overlay.classList.add('open');
+        
+        try {
+            const res = await fetch('/Dashboard/GetFilePreview?id=' + fileId);
+            const data = await res.json();
+            
+            document.getElementById('previewFileName').textContent = data.name;
+            document.getElementById('previewFileType').textContent = data.type;
+            document.getElementById('previewFileDate').textContent = data.date;
+            document.getElementById('previewFileSummary').textContent = data.summary || 'Özet bulunamadı.';
+        } catch (e) {
+            document.getElementById('previewFileSummary').textContent = 'Hata: Önizleme yüklenemedi.';
+        }
+    }
+
+    function closeFilePreview() {
+        document.getElementById('filePreviewModal').classList.remove('open');
+        if (!document.getElementById('chatSidebar').classList.contains('sidebar-open')) {
+            document.getElementById('sidebarDimOverlay').classList.remove('open');
+        }
+    }
 
     // Auto-scroll to bottom
     function scrollToBottom() {
@@ -475,7 +590,10 @@
     }
 
     if (sidebarToggleBtn) sidebarToggleBtn.addEventListener('click', openSidebar);
-    if (sidebarDimOverlay) sidebarDimOverlay.addEventListener('click', closeSidebar);
+    if (sidebarDimOverlay) sidebarDimOverlay.addEventListener('click', () => {
+        closeSidebar();
+        closeFilePreview();
+    });
 
     function appendMessage(role, content) {
         const wrapper = document.createElement('div');
@@ -505,6 +623,7 @@
 
         chatMessages.insertBefore(wrapper, typingIndicator);
         scrollToBottom();
+        return wrapper;
     }
 
     function escapeHtml(text) {
@@ -537,7 +656,8 @@
             const data = await response.json();
             typingIndicator.classList.add('d-none');
             if (data.success) {
-                appendMessage('assistant', data.response);
+                const assistantMsg = appendMessage('assistant', data.response);
+                renderCommandButtons(assistantMsg.querySelector('.bubble-content'));
                 // Always update session id (first message creates it)
                 if (data.sessionId) {
                     sessionIdInput.value = data.sessionId;

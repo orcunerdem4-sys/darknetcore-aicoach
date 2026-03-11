@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="utf-8" />
@@ -431,6 +431,30 @@
                 setTheme(currentTheme === 'dark' ? 'light' : 'dark');
             });
         }
+
+        // --- Global Sidebar/Overlay Helpers ---
+        function toggleSidebar(show) {
+            const sidebar = document.getElementById('chatSidebar');
+            const overlay = document.getElementById('sidebarDimOverlay');
+            if (show) {
+                sidebar?.classList.add('sidebar-open');
+                overlay?.classList.add('open');
+                document.body.style.overflow = 'hidden';
+            } else {
+                sidebar?.classList.remove('sidebar-open');
+                overlay?.classList.remove('open');
+                document.body.style.overflow = '';
+            }
+        }
+        
+        // Listen for overlay clicks globally if it exists
+        document.addEventListener('DOMContentLoaded', () => {
+            const overlay = document.getElementById('sidebarDimOverlay');
+            if (overlay) overlay.addEventListener('click', () => toggleSidebar(false));
+            
+            const toggleBtn = document.getElementById('sidebarToggleBtn');
+            if (toggleBtn) toggleBtn.addEventListener('click', () => toggleSidebar(true));
+        });
     </script>
     @await RenderSectionAsync("Scripts", required: false)
     

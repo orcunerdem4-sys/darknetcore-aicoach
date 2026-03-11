@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using DarkNetCore.Models;
 using DarkNetCore.Data;
@@ -796,73 +796,96 @@ public class DashboardController : Controller
             var contentStart = jsonStart + 7;
             var jsonEnd = responseText.IndexOf("```", contentStart);
             if (jsonEnd == -1) break;
-
             var jsonStr = responseText.Substring(contentStart, jsonEnd - contentStart).Trim();
+
             try
             {
                 using var doc = System.Text.Json.JsonDocument.Parse(jsonStr);
                 var root = doc.RootElement;
                 if (root.TryGetProperty("command", out var cmdProp))
                 {
-                    var cmd = cmdProp.GetString();
-                    if (cmd == "add_task")
+                    var cmdType = cmdProp.GetString();
+                    if (cmdType == "add_task")
                     {
-                        var title = root.GetProperty("title").GetString();
-                        var dateStr = root.GetProperty("date").GetString();
-                        var duration = root.TryGetProperty("durationHours", out var durProp) ? durProp.GetDouble() : 1.0;
-                        var priorityStr = root.TryGetProperty("priority", out var prioProp) ? prioProp.GetString() : "Medium";
-                        var diffScore = root.TryGetProperty("difficultyScore", out var dsProp) ? dsProp.GetInt32() : 3;
-                        var diffReason = root.TryGetProperty("difficultyReason", out var drProp) ? drProp.GetString() : "";
-
-                        if (DateTime.TryParse(dateStr, out var date))
-                        {
-                            var task = new TaskItem
-                            {
-                                Id = Guid.NewGuid().ToString(),
-                                Title = title ?? "Yeni Görev",
-                                Description = "🤖 AI Plan: Chat üzerinden eklendi.",
-                                DueDate = date,
-                                DurationHours = duration,
-                                Priority = Enum.TryParse<TaskPriority>(priorityStr, out var p) ? p : TaskPriority.Medium,
-                                Category = TaskCategory.Study,
-                                DifficultyScore = diffScore,
-                                DifficultyReason = diffReason ?? ""
-                            };
-                            await _dataService.AddTaskAsync(task);
-                            actionPerformed = "task_added";
-                        }
-                    }
-                    else if (cmd == "remove_task")
-                    {
-                        var title = root.GetProperty("title").GetString()?.ToLower();
-                        if (!string.IsNullOrEmpty(title))
-                        {
-                            var allTasks = await _dataService.GetTasksAsync();
-                            var taskToDelete = allTasks.FirstOrDefault(t => t.Title.ToLower() == title);
-                            if (taskToDelete != null)
-                            {
-                                await _dataService.DeleteTaskAsync(taskToDelete.Id);
-                                actionPerformed = "task_removed";
-                            }
-                        }
+                        actionPerformed = "requires_approval:add_task";
                     }
                 }
             }
-            catch (Exception ex)
-            {
-                Console.WriteLine("JSON Command Parse Error: " + ex.Message);
-            }
+            catch (Exception) { }
 
-            // Remove this json block from response text, then continue from same position
             var fullBlock = responseText.Substring(jsonStart, (jsonEnd + 3) - jsonStart);
-            responseText = responseText.Remove(jsonStart, fullBlock.Length).Trim();
-            // Don't advance searchFrom since we removed text at jsonStart
+            var replacement = $"<div class='ai-command-container' data-command='{jsonStr.Replace("'", "&apos;")}'></div>";
+            responseText = responseText.Replace(fullBlock, replacement).Trim();
+            searchFrom = jsonStart + replacement.Length;
         }
 
         // Save assistant response to DB
         await _dataService.AddChatMessageAsync(request.SessionId, "assistant", responseText);
 
-        return Json(new { success = true, response = responseText, reply = responseText, actionPerformed, sessionId = request.SessionId });
+        return Json(new { success = true, response = responseText, actionPerformed, sessionId = request.SessionId });
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> ExecuteAiCommand([FromBody] System.Text.Json.JsonElement root)
+    {
+        try
+        {
+            if (root.TryGetProperty("command", out var cmdProp))
+            {
+                var cmd = cmdProp.GetString();
+                if (cmd == "add_task")
+                {
+                    var title = root.GetProperty("title").GetString();
+                    var dateStr = root.GetProperty("date").GetString();
+                    var duration = root.TryGetProperty("durationHours", out var durProp) ? durProp.GetDouble() : 1.0;
+                    var priorityStr = root.TryGetProperty("priority", out var prioProp) ? prioProp.GetString() : "Medium";
+                    var diffScore = root.TryGetProperty("difficultyScore", out var dsProp) ? dsProp.GetInt32() : 3;
+                    var diffReason = root.TryGetProperty("difficultyReason", out var drProp) ? drProp.GetString() : "";
+
+                    if (DateTime.TryParse(dateStr, out var date))
+                    {
+                        var task = new TaskItem
+                        {
+                            Id = Guid.NewGuid().ToString(),
+                            Title = title ?? "Yeni Görev",
+                            Description = "🤖 AI Plan: Chat onaylı eklendi.",
+                            DueDate = date.ToUniversalTime(),
+                            DurationHours = duration,
+                            Priority = Enum.TryParse<TaskPriority>(priorityStr, out var p) ? p : TaskPriority.Medium,
+                            Category = TaskCategory.Study,
+                            DifficultyScore = diffScore,
+                            DifficultyReason = diffReason ?? ""
+                        };
+                        await _dataService.AddTaskAsync(task);
+                        return Json(new { success = true, message = "Görev başarıyla eklendi!" });
+                    }
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            return Json(new { success = false, message = "İşlem başarısız: " + ex.Message });
+        }
+        return Json(new { success = false, message = "Komut anlaşılamadı." });
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> GetFilePreview(string id)
+    {
+        var files = await _dataService.GetFilesAsync();
+        var file = files.FirstOrDefault(f => f.Id == id);
+        if (file == null) return NotFound();
+
+        return Json(new
+        {
+            id = file.Id,
+            name = file.FileName,
+            type = file.Type.ToString(),
+            summary = file.AnalysisSummary,
+            topic = file.Topic,
+            size = file.FileSize,
+            date = file.UploadDate.ToString("dd MMM yyyy")
+        });
     }
 
     private DateTime FindNextFreeSlot(DateTime startDate, double durationHours, List<TaskItem> allTasks)
