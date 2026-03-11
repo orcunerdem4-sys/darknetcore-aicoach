@@ -19,6 +19,8 @@ builder.Services.AddHttpContextAccessor();
 
 // Add Data Protection to persist keys across restarts so cookies remain valid
 var keysDirectory = Path.Combine(builder.Environment.ContentRootPath, "App_Data", "Keys");
+if (!Directory.Exists(keysDirectory)) Directory.CreateDirectory(keysDirectory);
+
 builder.Services.AddDataProtection()
     .PersistKeysToFileSystem(new DirectoryInfo(keysDirectory))
     .SetApplicationName("Dopamind");
@@ -33,7 +35,7 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
         options.ExpireTimeSpan = TimeSpan.FromDays(30);
         options.SlidingExpiration = true;
         options.Cookie.HttpOnly = true;
-        options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest; // More resilient for proxies
+        options.Cookie.SecurePolicy = CookieSecurePolicy.Always; // Essential for Render/HTTPS
         options.Cookie.SameSite = SameSiteMode.Lax;
         options.Cookie.IsEssential = true;
     });
@@ -46,19 +48,19 @@ builder.Services.AddSession(options =>
 
 var app = builder.Build();
 
-// Seed initial data
-using (var scope = app.Services.CreateScope())
-{
-    DarkNetCore.Data.DatabaseSeeder.SeedData(scope.ServiceProvider);
-}
-
-// Configure the HTTP request pipeline.
+// 1. Move ForwardedHeaders to the VERY TOP of the pipeline
 app.UseForwardedHeaders(new ForwardedHeadersOptions
 {
     ForwardedHeaders = Microsoft.AspNetCore.HttpOverrides.ForwardedHeaders.XForwardedFor | Microsoft.AspNetCore.HttpOverrides.ForwardedHeaders.XForwardedProto,
     KnownNetworks = { },
     KnownProxies = { }
 });
+
+// 2. Seed initial data
+using (var scope = app.Services.CreateScope())
+{
+    DarkNetCore.Data.DatabaseSeeder.SeedData(scope.ServiceProvider);
+}
 
 if (!app.Environment.IsDevelopment())
 {
