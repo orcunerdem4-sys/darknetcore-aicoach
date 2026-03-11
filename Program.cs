@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authentication.Cookies;
 using DarkNetCore.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.DataProtection;
