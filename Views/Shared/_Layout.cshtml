@@ -212,8 +212,15 @@
                     </div>
                 </div>
 
+                <div class="list-group list-group-flush mb-4 rounded shadow-sm overflow-hidden">
+                    <a href="/Account/ResetPassword" class="list-group-item list-group-item-action d-flex align-items-center py-3" style="background-color: var(--bg-card); color: var(--text-main); border-color: var(--border-dim);">
+                        <i data-lucide="key-round" class="me-3 text-primary" size="20"></i>
+                        <span class="fw-medium">Şifre Sıfırla</span>
+                    </a>
+                </div>
+
                 <div class="mt-auto">
-                    <a asp-controller="Account" asp-action="Logout" class="btn btn-danger w-100 fw-bold d-flex align-items-center justify-content-center">
+                    <a asp-controller="Account" asp-action="Logout" class="btn btn-outline-danger w-100 fw-bold d-flex align-items-center justify-content-center py-2" style="border-radius: 12px;">
                         <i data-lucide="log-out" size="18" class="me-2"></i> Çıkış Yap
                     </a>
                 </div>
@@ -376,7 +383,8 @@
                     if (note.imagePath) {
                         imgHtml = `<img src="${note.imagePath}" class="rounded mt-2 mb-1 w-100 shadow-sm cursor-pointer" onclick="window.open('${note.imagePath}', '_blank')" style="max-height: 150px; object-fit: cover;">`;
                     }
-                    div.innerHTML = `<p class="mb-2 text-dark" style="font-size: 0.95rem; line-height: 1.5; white-space: pre-wrap;">${note.content.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</p>
+                    const noteContent = (note.content || '').replace(/</g, "&lt;").replace(/>/g, "&gt;");
+                    div.innerHTML = `<p class="mb-2 text-dark" style="font-size: 0.95rem; line-height: 1.5; white-space: pre-wrap;">${noteContent}</p>
                                      ${imgHtml}
                                      <small class="text-secondary opacity-75" style="font-size: 0.75rem;"><i data-lucide="clock" size="10" class="me-1"></i>${date}</small>`;
                     list.appendChild(div);

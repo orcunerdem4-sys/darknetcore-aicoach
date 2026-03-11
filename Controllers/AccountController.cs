@@ -87,12 +87,18 @@ public class AccountController : Controller
     }
 
     [HttpPost]
-    public async Task<IActionResult> Register(string username, string email, string password, string? returnUrl = null)
+    public async Task<IActionResult> Register(string username, string email, string password, string confirmPassword, string? returnUrl = null)
     {
         ViewData["ReturnUrl"] = returnUrl;
         if (string.IsNullOrEmpty(username) || string.IsNullOrEmpty(email) || string.IsNullOrEmpty(password))
         {
             ViewBag.Error = "Tüm alanlar zorunludur.";
+            return View();
+        }
+
+        if (password != confirmPassword)
+        {
+            ViewBag.Error = "Şifreler eşleşmiyor.";
             return View();
         }
 
@@ -132,5 +138,51 @@ public class AccountController : Controller
     {
         await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
         return RedirectToAction("Index", "Home");
+    }
+
+    [HttpGet]
+    public IActionResult ForgotPassword()
+    {
+        return View();
+    }
+
+    [HttpPost]
+    public IActionResult ForgotPassword(string email)
+    {
+        // Place holder for forgot password logic
+        TempData["SuccessMessage"] = "Şifre sıfırlama bağlantısı e-posta adresinize gönderildi (Simülasyon).";
+        return RedirectToAction("Login");
+    }
+
+    [HttpGet]
+    public IActionResult ResetPassword()
+    {
+        return View();
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> ResetPassword(string oldPassword, string newPassword, string confirmPassword)
+    {
+        if (newPassword != confirmPassword)
+        {
+            ViewBag.Error = "Yeni şifreler eşleşmiyor.";
+            return View();
+        }
+
+        var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (string.IsNullOrEmpty(userId)) return RedirectToAction("Login");
+
+        var user = await _context.Users.FindAsync(userId);
+        if (user == null || user.PasswordHash != oldPassword)
+        {
+            ViewBag.Error = "Mevcut şifre hatalı.";
+            return View();
+        }
+
+        user.PasswordHash = newPassword;
+        await _context.SaveChangesAsync();
+
+        TempData["SuccessMessage"] = "Şifreniz başarıyla güncellendi.";
+        return RedirectToAction("Chat", "Dashboard");
     }
 }

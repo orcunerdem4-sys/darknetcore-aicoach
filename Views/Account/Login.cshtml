@@ -130,7 +130,10 @@
                        placeholder="kullanici_adi" required autocomplete="username">
             </div>
             <div class="mb-3">
-                <label for="password" class="form-label">Şifre</label>
+                <div class="d-flex justify-content-between align-items-center mb-1">
+                    <label for="password" class="form-label mb-0">Şifre</label>
+                    <a href="/Account/ForgotPassword" class="small text-decoration-none" style="color: #059669; font-size: 0.82rem;">Şifremi Unuttum?</a>
+                </div>
                 <div class="password-wrapper">
                     <input type="password" class="form-control" id="password" name="password"
                            placeholder="••••••••" required autocomplete="current-password">
