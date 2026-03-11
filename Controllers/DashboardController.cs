@@ -43,6 +43,7 @@ public class DashboardController : Controller
             color = t.Priority == TaskPriority.High ? "#dc3545" : t.Priority == TaskPriority.Medium ? "#ffc107" : "#198754",
             textColor = t.Priority == TaskPriority.Medium ? "#000" : "#fff",
             priority = (int)t.Priority,
+            dueDate = t.DueDate,
             difficultyScore = t.DifficultyScore,
             difficultyReason = string.IsNullOrEmpty(t.DifficultyReason) ? "Planlanmış standart görev." : t.DifficultyReason
         });

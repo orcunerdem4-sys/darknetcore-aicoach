@@ -6,11 +6,20 @@ body.light-theme {
 
 /* Glassmorphism for Light Theme */
 .glass-panel {
-    background: var(--bg-secondary);
+    background: var(--bg-card);
     border: 1px solid var(--border-color);
-    border-radius: 12px;
-    box-shadow: 0 4px 6px -1px var(--glass-border);
+    border-radius: 16px;
+    box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
 }
+
+.summary-mini-card {
+    background: var(--bg-input);
+    border: 1px solid var(--border-color);
+    transition: transform 0.2s;
+}
+.summary-mini-card:hover { transform: translateY(-2px); }
 
 .stat-card {
     transition: transform 0.2s;
@@ -50,12 +59,37 @@ body.light-theme {
 }
 
 .fc-button-primary {
-    background-color: var(--accent-primary) !important;
-    border-color: var(--accent-primary) !important;
+    background: var(--accent-green) !important;
+    border: none !important;
+    border-radius: 8px !important;
+    font-size: 0.85rem !important;
+    padding: 6px 12px !important;
+    font-weight: 600 !important;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1) !important;
+}
+
+.fc-button-primary:hover {
+    background: var(--accent-hover) !important;
+    transform: translateY(-1px);
 }
 
 .fc-button-active {
-    background-color: var(--accent-hover) !important;
+    background: #047857 !important;
+}
+
+.fc .fc-toolbar-title {
+    font-size: 1.25rem !important;
+    font-weight: 700 !important;
+    color: var(--text-main);
+}
+
+/* Calendar mobile header stack */
+@media (max-width: 768px) {
+    .fc .fc-toolbar {
+        flex-direction: column;
+        gap: 10px;
+    }
+    .fc .fc-toolbar-title { font-size: 1.1rem !important; }
 }
 
 /* Premium Logo Styles (Green Emerald) */
@@ -94,6 +128,46 @@ body.light-theme {
     position: relative;
     width: 100%;
     max-width: 400px;
+}
+
+/* Feedback FAB Reposition */
+.btn-feedback-fab {
+    position: fixed;
+    bottom: 90px;
+    right: 30px;
+    padding: 0 20px;
+    height: 50px;
+    border-radius: 25px;
+    z-index: 1050;
+    border: 2px solid var(--accent-green);
+    transition: transform 0.2s, box-shadow 0.2s;
+    background: var(--accent-green);
+    color: white;
+}
+
+.btn-feedback-fab:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 25px rgba(5,150,105,0.4);
+    color: white;
+}
+
+/* Task Card Refinement */
+.list-group-item.list-group-item-action {
+    transition: all 0.2s;
+    border: 1px solid var(--border-color) !important;
+}
+
+.dark-theme .list-group-item.list-group-item-action:hover {
+    background: var(--bg-input) !important;
+}
+
+.dark-theme .text-dark {
+    color: var(--text-main) !important;
+}
+
+/* PWA button clash prevention */
+#pwaInstallBtn {
+    bottom: 160px !important; /* Move up to not clash with Feedback FAB */
 }
 
 .file-upload-input {
