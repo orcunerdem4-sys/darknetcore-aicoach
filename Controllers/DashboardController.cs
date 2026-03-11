@@ -881,6 +881,8 @@ public class DashboardController : Controller
             id = file.Id,
             name = file.FileName,
             type = file.Type.ToString(),
+            url = file.Url,
+            path = file.FilePath,
             summary = file.AnalysisSummary,
             topic = file.Topic,
             size = file.FileSize,

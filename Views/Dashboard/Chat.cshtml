@@ -459,9 +459,11 @@
     async function showFilePreview(fileId) {
         const modal = document.getElementById('filePreviewModal');
         const overlay = document.getElementById('sidebarDimOverlay');
+        const bodyContent = document.getElementById('previewFileSummary');
         
         modal.classList.add('open');
         overlay.classList.add('open');
+        bodyContent.innerHTML = '<div class="text-center p-3"><div class="spinner-border spinner-border-sm text-success"></div></div>';
         
         try {
             const res = await fetch('/Dashboard/GetFilePreview?id=' + fileId);
@@ -470,9 +472,29 @@
             document.getElementById('previewFileName').textContent = data.name;
             document.getElementById('previewFileType').textContent = data.type;
             document.getElementById('previewFileDate').textContent = data.date;
-            document.getElementById('previewFileSummary').textContent = data.summary || 'Özet bulunamadı.';
+            
+            let html = '';
+            const filePath = data.path || data.url;
+
+            if (data.type === 'Image') {
+                html = `<img src="${filePath}" class="img-fluid rounded shadow-sm mb-3" style="max-height: 300px; width: 100%; object-fit: contain;">`;
+            } else if (data.type === 'Document' && (filePath.endsWith('.pdf'))) {
+                html = `<div class="mb-3 text-center">
+                            <i data-lucide="file-text" size="48" class="text-muted mb-2"></i>
+                            <p class="small text-muted">PDF dökümanı hazır.</p>
+                            <a href="${filePath}" target="_blank" class="btn btn-sm btn-outline-success">Tam Ekran Aç</a>
+                        </div>`;
+            } else {
+                html = `<div class="mb-3 text-center"><i data-lucide="file" size="48" class="text-muted mb-2"></i></div>`;
+            }
+
+            html += `<div class="preview-summary-text small mt-2">${data.summary || 'Özet yok.'}</div>`;
+            html += `<div class="mt-3"><a href="${filePath}" download class="btn btn-sm btn-success w-100">Dosyayı İndir</a></div>`;
+            
+            bodyContent.innerHTML = html;
+            lucide.createIcons();
         } catch (e) {
-            document.getElementById('previewFileSummary').textContent = 'Hata: Önizleme yüklenemedi.';
+            bodyContent.innerHTML = '<div class="text-danger small">Hata: Önizleme yüklenemedi.</div>';
         }
     }
 
