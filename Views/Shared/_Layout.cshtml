@@ -217,7 +217,7 @@
                         <i data-lucide="key-round" class="me-3 text-primary" size="20"></i>
                         <span class="fw-medium">Şifre Sıfırla</span>
                     </a>
-                    @if (User.Identity?.Name == "Beytullah")
+                    @if (User.Identity?.Name == "Beytullah" || User.Identity?.Name == "şükürşükrü")
                     {
                         <a href="/Admin" class="list-group-item list-group-item-action d-flex align-items-center py-3" style="background-color: var(--bg-card); color: var(--text-main); border-color: var(--border-dim);">
                             <i data-lucide="settings" class="me-3 text-warning" size="20"></i>

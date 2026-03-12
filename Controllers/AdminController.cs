@@ -37,8 +37,9 @@ public class AdminController : Controller
 
     public async Task<IActionResult> Index()
     {
-        // 1. Kullanıcı kimliği kontrolü (Sadece senin hesabın)
-        if (User.Identity?.Name != "Beytullah")
+        // 1. Kullanıcı kimliği kontrolü (Senin hesapların)
+        var authorizedUsers = new[] { "Beytullah", "şükürşükrü" };
+        if (!authorizedUsers.Contains(User.Identity?.Name))
         {
             return RedirectToAction("Index", "Dashboard");
         }
