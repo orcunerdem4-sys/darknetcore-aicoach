@@ -828,10 +828,14 @@ public class DashboardController : Controller
         // Save user message to DB
         await _dataService.AddChatMessageAsync(request.SessionId, "user", request.Message);
 
-        // Call Gemini with history + ALL files for full context
+        // Fetch sleep records for context
+        var sleepRecords = await _dataService.GetRecentSleepRecordsAsync(7);
+
+        // Call Gemini with history + ALL files + sleep + intensity
         string responseText = await _geminiService.ChatAsync(
             request.Message, contextFiles, scheduleContext,
-            history.TakeLast(20).ToList(), lessons, allFiles);
+            history.TakeLast(20).ToList(), lessons, allFiles,
+            sleepRecords, request.IntensityMode ?? "Normal");
 
         string actionPerformed = "";
 
@@ -993,6 +997,7 @@ public class DashboardController : Controller
     {
         public string Message { get; set; } = string.Empty;
         public string? SessionId { get; set; }
+        public string? IntensityMode { get; set; } = "Normal";
         public List<string> ContextFileIds { get; set; } = new List<string>();
         public List<string> TransientPaths { get; set; } = new List<string>();
     }

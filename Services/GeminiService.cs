@@ -50,7 +50,9 @@ Example JSON: {{ ""topic"": ""Biology"", ""complexityScore"": 7, ""wordCount"": 
         string userScheduleContext,
         List<ChatMessage>? history = null,
         List<Lesson>? lessons = null,
-        List<UploadedFile>? allFiles = null)
+        List<UploadedFile>? allFiles = null,
+        List<SleepRecord>? sleepRecords = null,
+        string intensityMode = "Normal")
     {
         if (string.IsNullOrEmpty(_apiKey))
             return "⚠️ Gemini API anahtarı eksik.";
@@ -61,6 +63,28 @@ Example JSON: {{ ""topic"": ""Biology"", ""complexityScore"": 7, ""wordCount"": 
         sb.AppendLine("Kullanıcının tüm ders materyallerini, dosyalarını, görevlerini ve programını biliyorsun.");
         sb.AppendLine("Bu bilgilerle kişiselleştirilmiş, somut öneriler sunuyorsun.");
         sb.AppendLine();
+
+        // Intensity Mode
+        var intensityDesc = intensityMode switch
+        {
+            "Light"  => "Hafif Tempo: Günlük maksimum 3-4 saat net ders çalışması. Dinlenmeye, sosyal hayata ve hobiye bol zaman bırak.",
+            "Normal" => "Normal Tempo: Günlük 5-6 saat net ders çalışması. Sosyal zaman ve dersler dengeli.",
+            "Intense"=> "Yoğun Tempo: Günlük 7-8 saat net ders çalışması. Dersler öncelikli ama uyku ve spor ihmal edilmez.",
+            "Max"    => "Maksimum Tempo: Günlük 9+ saat ders çalışması. Gerçek sınav dönemi modu. Minimum sosyal zaman.",
+            _        => "Normal Tempo: Günlük 5-6 saat net ders çalışması."
+        };
+        sb.AppendLine($"🎯 ÇALIŞMA YOGUNLUĞU: {intensityMode} → {intensityDesc}");
+        sb.AppendLine();
+        sb.AppendLine("⚠️ KRİTİK KURAL - GERÇEKÇİ PROGRAM YAPIMI:");
+        sb.AppendLine("Program yaparken yalnızca dersleri doldurmak YASAK. Aşağıdaki tüm bileşenleri MUTLAKA dahil et:");
+        sb.AppendLine("  - Uyku süresini dikkate al (kalkma + yatma saati)");
+        sb.AppendLine("  - Yemek araları (kahvaltı, öğle, akşam — her biri 30-45 dk)");
+        sb.AppendLine("  - Beden aktivitesi / spor bloğu (seçilen yoğunluğa göre 30-90 dk)");
+        sb.AppendLine("  - Kız arkadaşla/sosyal zaman (özellikle akşam saatlerinde, yoğunluğa göre)");
+        sb.AppendLine("  - Mola süreleri (her 45-90 dk çalışmada 10-15 dk mola)");
+        sb.AppendLine("  - Boş / serbest zaman tamponu");
+        sb.AppendLine("Kullanıcı senden program istediğinde, o gün/o haftaki VERİTABANINDAKİ görevleri, dersleri ve uyku kayıtlarını hesaba katarak üret.");
+        sb.AppendLine();
         sb.AppendLine("⚠️ ÖNEMLI KURAL - Excel Ders Programı Yorumlama:");
         sb.AppendLine("Yüklenen Excel dosyaları (özellikle 'Dönem', 'Program', 'Schedule' gibi isimler taşıyanlar)");
         sb.AppendLine("ÜNİVERSİTE HAFTALIK DERS PROGRAMI ŞABLONLARIdır. Bu dosyalar:");
@@ -70,6 +94,25 @@ Example JSON: {{ ""topic"": ""Biology"", ""complexityScore"": 7, ""wordCount"": 
         sb.AppendLine("- Dosyada iki sütun yan yana varsa (Türkçe program | İngilizce program), kullanıcı İngilizce programı takip ediyor.");
         sb.AppendLine("- EĞER sana verilen dosya özetinde (AnalysisSummary) saatler veya ders içerikleri varsa bunlara dayanarak analiz yap.");
         sb.AppendLine("- EĞER 'Synced from Drive' dışında hiçbir içerik yoksa veya 'Hata' mesajı görüyorsan, kullanıcıya içeriği okuyamadığını dürüstçe söyle.");
+
+        if (sleepRecords != null && sleepRecords.Any())
+        {
+            var avgSleep = Math.Round(sleepRecords.Average(s => s.TotalHours), 1);
+            var latest = sleepRecords.OrderByDescending(s => s.SleepEnd).FirstOrDefault();
+            sb.AppendLine("😴 Uyku Verileri (Son 7 Gün):");
+            sb.AppendLine($"  - Ortalama uyku: {avgSleep} saat/gece");
+            if (latest != null)
+            {
+                var turkeyTz2 = TimeZoneInfo.FindSystemTimeZoneById(
+                    OperatingSystem.IsWindows() ? "Turkey Standard Time" : "Europe/Istanbul");
+                var sleepStart = TimeZoneInfo.ConvertTimeFromUtc(DateTime.SpecifyKind(latest.SleepStart, DateTimeKind.Utc), turkeyTz2);
+                var sleepEnd = TimeZoneInfo.ConvertTimeFromUtc(DateTime.SpecifyKind(latest.SleepEnd, DateTimeKind.Utc), turkeyTz2);
+                sb.AppendLine($"  - Son uyku: {sleepStart:HH:mm} → {sleepEnd:HH:mm} ({latest.TotalHours:F1} saat)");
+                sb.AppendLine($"  - Kalıcı kalkış saati tahmini: {sleepEnd:HH:mm}");
+            }
+            sb.AppendLine("  → Program yaparken bu kalkış saatinden başlayan bloklar öner.");
+            sb.AppendLine();
+        }
 
         if (lessons != null && lessons.Any())
         {

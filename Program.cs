@@ -35,7 +35,7 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
         options.ExpireTimeSpan = TimeSpan.FromDays(30);
         options.SlidingExpiration = true;
         options.Cookie.HttpOnly = true;
-        options.Cookie.SecurePolicy = CookieSecurePolicy.Always; // Essential for Render/HTTPS
+        options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest; // Works on both HTTP (dev) and HTTPS (prod)
         options.Cookie.SameSite = SameSiteMode.Lax;
         options.Cookie.IsEssential = true;
     });

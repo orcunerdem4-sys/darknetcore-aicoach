@@ -256,7 +256,24 @@
 
         <!-- Input Area -->
         <div class="chat-input-area">
-            <div id="attachedMediaPreview" class="d-flex gap-2 mb-2 flex-wrap"></div>
+            <!-- Intensity Mode Selector -->
+        <div class="d-flex align-items-center gap-2 mb-2" style="font-size: 0.82rem;">
+            <span class="text-muted fw-medium" style="white-space:nowrap;"><i data-lucide="zap" size="13" class="me-1"></i>Tempo:</span>
+            <div class="btn-group btn-group-sm" role="group" id="intensityGroup">
+                <input type="radio" class="btn-check" name="intensity" id="int-light" value="Light" autocomplete="off">
+                <label class="btn btn-outline-secondary" for="int-light">🌿 Hafif</label>
+
+                <input type="radio" class="btn-check" name="intensity" id="int-normal" value="Normal" autocomplete="off" checked>
+                <label class="btn btn-outline-primary" for="int-normal">⚡ Normal</label>
+
+                <input type="radio" class="btn-check" name="intensity" id="int-intense" value="Intense" autocomplete="off">
+                <label class="btn btn-outline-warning" for="int-intense">🔥 Yoğun</label>
+
+                <input type="radio" class="btn-check" name="intensity" id="int-max" value="Max" autocomplete="off">
+                <label class="btn btn-outline-danger" for="int-max">💪 Max</label>
+            </div>
+        </div>
+        <div id="attachedMediaPreview" class="d-flex gap-2 mb-2 flex-wrap"></div>
             <div class="input-pill-container" id="inputPillContainer">
                 <button type="button" class="input-action-btn" id="attachBtn" title="Dosya Ekle">
                     <i data-lucide="plus" size="20"></i>
@@ -668,6 +685,11 @@
         return text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
     }
 
+    function getIntensityMode() {
+        const checked = document.querySelector('input[name="intensity"]:checked');
+        return checked ? checked.value : 'Normal';
+    }
+
     async function sendMessage() {
         const msg = chatInput.value.trim();
         if (!msg && transientPaths.length === 0 && attachedFileIds.length === 0) return;
@@ -687,6 +709,7 @@
                 body: JSON.stringify({
                     message: msg,
                     sessionId: getSessionId(),
+                    intensityMode: getIntensityMode(),
                     contextFileIds: attachedFileIds,
                     transientPaths: transientPaths
                 })
