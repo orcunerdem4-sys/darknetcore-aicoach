@@ -42,10 +42,12 @@ public class AdminController : Controller
         var users = await _dataService.GetAllUsersAsync();
         var feedbacks = await _dataService.GetAllFeedbacksAsync();
         var errors = await _dataService.GetErrorLogsAsync();
+        var activities = await _dataService.GetUserActivitiesAsync();
 
         ViewBag.Users = users;
         ViewBag.Feedbacks = feedbacks;
         ViewBag.Errors = errors;
+        ViewBag.Activities = activities;
 
         return View();
     }

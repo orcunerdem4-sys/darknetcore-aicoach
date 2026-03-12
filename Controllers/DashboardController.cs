@@ -97,26 +97,42 @@ public class DashboardController : Controller
 
     [HttpPost]
     [IgnoreAntiforgeryToken]
-    public async Task<IActionResult> SaveFeedback([FromForm] string content, IFormFile? image)
+    public async Task<IActionResult> SaveFeedback([FromForm] string? content, IFormFile? image)
     {
-        if (string.IsNullOrWhiteSpace(content))
-            return Json(new { success = false });
-
-        string? imagePath = null;
-        if (image != null && image.Length > 0)
+        try
         {
-            var fileName = Guid.NewGuid().ToString() + Path.GetExtension(image.FileName);
-            var filePath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot/uploads/notes", fileName);
-            Directory.CreateDirectory(Path.GetDirectoryName(filePath)!);
-            using (var stream = new FileStream(filePath, FileMode.Create))
-            {
-                await image.CopyToAsync(stream);
-            }
-            imagePath = "/uploads/notes/" + fileName;
-        }
+            if (string.IsNullOrWhiteSpace(content) && (image == null || image.Length == 0))
+                return Json(new { success = false, message = "Not içeriği veya görsel boş olamaz." });
 
-        await _dataService.SaveFeedbackAsync(content, imagePath);
-        return Json(new { success = true });
+            string? imagePath = null;
+            if (image != null && image.Length > 0)
+            {
+                var fileName = Guid.NewGuid().ToString() + Path.GetExtension(image.FileName);
+                var uploadDir = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads", "notes");
+                
+                if (!Directory.Exists(uploadDir))
+                {
+                    Directory.CreateDirectory(uploadDir);
+                }
+
+                var filePath = Path.Combine(uploadDir, fileName);
+                
+                using (var stream = new FileStream(filePath, FileMode.Create))
+                {
+                    await image.CopyToAsync(stream);
+                }
+                imagePath = "/uploads/notes/" + fileName;
+            }
+
+            await _dataService.SaveFeedbackAsync(content ?? string.Empty, imagePath);
+            return Json(new { success = true });
+        }
+        catch (Exception ex)
+        {
+            // Log error for debugging
+            await _dataService.LogErrorAsync(ex.Message, ex.StackTrace, "/Dashboard/SaveFeedback");
+            return Json(new { success = false, message = "Sunucu tarafında bir hata oluştu: " + ex.Message });
+        }
     }
 
     [HttpGet]
@@ -139,6 +155,14 @@ public class DashboardController : Controller
     }
 
     
+    [HttpPost]
+    public async Task<IActionResult> TrackActivity([FromBody] string panelName)
+    {
+        if (string.IsNullOrEmpty(panelName)) return BadRequest();
+        await _dataService.LogUserActivityAsync(panelName);
+        return Ok();
+    }
+
     [HttpPost]
     public IActionResult OptimizeSchedule([FromBody] DateTime date)
     {

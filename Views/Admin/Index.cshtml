@@ -130,6 +130,54 @@
         </div>
       </div>
 
+      <!-- User Activity Category -->
+      <div class="accordion-item glass-panel mb-3 border-0 overflow-hidden rounded">
+        <h2 class="accordion-header" id="headingActivity">
+          <button class="accordion-button collapsed bg-transparent text-info fw-bold" type="button" data-bs-toggle="collapse" data-bs-target="#collapseActivity" aria-expanded="false" aria-controls="collapseActivity">
+            <i data-lucide="bar-chart-3" class="me-2"></i> Kullanıcı Etkinliği & Aktiflik
+          </button>
+        </h2>
+        <div id="collapseActivity" class="accordion-collapse collapse" aria-labelledby="headingActivity" data-bs-parent="#adminAccordion">
+          <div class="accordion-body">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0 small">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Kullanıcı</th>
+                                <th>Panel</th>
+                                <th>İlk Giriş</th>
+                                <th>Son Görülme</th>
+                                <th>Toplam Süre</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @{ var activities = (ViewBag.Activities as List<DarkNetCore.Models.UserActivity>) ?? new List<DarkNetCore.Models.UserActivity>(); }
+                            @if (activities.Any())
+                            {
+                                foreach (var act in activities)
+                                {
+                                    var user = users?.FirstOrDefault(u => u.Id == act.UserId)?.Username ?? act.UserId;
+                                    var totalMinutes = Math.Round(act.TotalSeconds / 60, 1);
+                                    <tr>
+                                        <td class="fw-bold text-primary">@@@user</td>
+                                        <td><span class="badge bg-secondary-subtle text-secondary">@act.PanelName</span></td>
+                                        <td>@act.StartTime.AddHours(3).ToString("HH:mm")</td>
+                                        <td>@act.LastSeenAt.AddHours(3).ToString("HH:mm")</td>
+                                        <td><span class="fw-bold">@totalMinutes</span> dk</td>
+                                    </tr>
+                                }
+                            }
+                            else
+                            {
+                                <tr><td colspan="5" class="text-center text-muted p-4">Bugün henüz bir aktivite kaydedilmedi.</td></tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+          </div>
+        </div>
+      </div>
+
     </div>
 </div>
 

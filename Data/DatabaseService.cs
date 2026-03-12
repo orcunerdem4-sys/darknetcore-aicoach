@@ -563,6 +563,56 @@ public class DatabaseService
         }
         await _context.SaveChangesAsync();
     }
+
+    // -----------------------------------------
+    // User Activity Tracking
+    // -----------------------------------------
+    public async Task LogUserActivityAsync(string panelName)
+    {
+        var userId = GetCurrentUserId();
+        if (string.IsNullOrEmpty(userId)) return;
+
+        var today = DateTime.UtcNow.Date;
+        
+        // Find existing activity for this user/panel today or create new
+        var activity = await _context.UserActivities
+            .FirstOrDefaultAsync(a => a.UserId == userId && a.PanelName == panelName && a.StartTime >= today);
+
+        if (activity == null)
+        {
+            activity = new UserActivity
+            {
+                UserId = userId,
+                PanelName = panelName,
+                StartTime = DateTime.UtcNow,
+                LastSeenAt = DateTime.UtcNow,
+                TotalSeconds = 0
+            };
+            _context.UserActivities.Add(activity);
+        }
+        else
+        {
+            var now = DateTime.UtcNow;
+            var secondsSinceLastSeen = (now - activity.LastSeenAt).TotalSeconds;
+
+            // If last seen was less than 5 minutes ago, count it as continuous session
+            if (secondsSinceLastSeen < 300) 
+            {
+                activity.TotalSeconds += secondsSinceLastSeen;
+            }
+            
+            activity.LastSeenAt = now;
+        }
+
+        await _context.SaveChangesAsync();
+    }
+
+    public async Task<List<UserActivity>> GetUserActivitiesAsync()
+    {
+        return await _context.UserActivities
+            .OrderByDescending(a => a.LastSeenAt)
+            .ToListAsync();
+    }
 }
 
 

@@ -367,14 +367,21 @@
             list.innerHTML = '<div class="text-center text-muted small mt-4">Yükleniyor...</div>';
             try {
                 const res = await fetch('/Dashboard/GetFeedbacks', { credentials: 'include' });
-                if (!res.ok || res.redirected) {
-                    list.innerHTML = '<div class="text-warning small p-3 text-center border rounded">Oturum süresi dolmuş olabilir. Sayfayı yenileyin.</div>';
+                
+                // Better handling of redirects or failed auth
+                if (res.redirected || res.status === 401) {
+                    list.innerHTML = '<div class="text-warning small p-3 text-center border rounded">Oturum süresi dolmuş veya giriş yapılmamış. Lütfen sayfayı yenileyip tekrar giriş yapın.</div>';
                     return;
                 }
+
+                if (!res.ok) {
+                    throw new Error(`Sunucu hatası: ${res.status}`);
+                }
+
                 const data = await res.json();
                 
                 list.innerHTML = '';
-                if(data.length === 0) {
+                if(!data || data.length === 0) {
                     list.innerHTML = '<div class="text-center text-muted small mt-4 p-4 rounded border" style="background:var(--bg-card);">Henüz not eklenmemiş.</div>';
                     return;
                 }
@@ -397,7 +404,7 @@
                 lucide.createIcons();
             } catch (err) {
                 console.error('Feedback load error:', err);
-                list.innerHTML = '<div class="text-danger small p-3 text-center border rounded">Notlar yüklenemedi: ' + err.message + '</div>';
+                list.innerHTML = '<div class="text-danger small p-3 text-center border rounded">Notlar yüklenemedi. Lütfen internet bağlantınızı kontrol edin.</div>';
             }
         }
 
@@ -472,27 +479,39 @@
                 const formData = new FormData();
                 formData.append('content', content);
                 if(selectedFeedbackBlob) {
-                    formData.append('image', selectedFeedbackBlob, 'pasted_image.png');
+                    // Use a more generic name for pasted images or use the original name if available
+                    const fileName = selectedFeedbackBlob.name || 'note_image.png';
+                    formData.append('image', selectedFeedbackBlob, fileName);
                 }
 
                 const res = await fetch('/Dashboard/SaveFeedback', {
                     method: 'POST',
-                    body: formData
+                    body: formData,
+                    credentials: 'include' // CRITICAL: Ensure cookie is sent
                 });
-                if (res.redirected) {
-                    window.location.href = '/Account/Login';
+
+                if (res.redirected || res.status === 401) {
+                    window.showToast("Oturum süresi dolmuş. Lütfen tekrar giriş yapın.", "error");
+                    setTimeout(() => window.location.href = '/Account/Login', 2000);
                     return;
                 }
+
                 if(res.ok) {
-                    input.value = '';
-                    clearFeedbackImage();
-                    loadFeedbacks();
-                    window.showToast("Not başarıyla eklendi!");
+                    const result = await res.json();
+                    if (result && result.success) {
+                        input.value = '';
+                        clearFeedbackImage();
+                        loadFeedbacks();
+                        window.showToast("Not başarıyla eklendi!");
+                    } else {
+                        window.showToast(result.message || "Kaydetme başarısız oldu (Sunucu hatası).", "error");
+                    }
                 } else {
-                    window.showToast("Kaydetme başarısız oldu.", "error");
+                    window.showToast("Kaydetme başarısız oldu (Durum: " + res.status + ")", "error");
                 }
             } catch (err) {
-                window.showToast("Sunucuya ulaşılamadı. Lütfen bağlantınızı kontrol edin.", "error");
+                console.error("Save error:", err);
+                window.showToast("İşlem sırasında bir hata oluştu. Bağlantınızı kontrol edin.", "error");
             }
         }
 
@@ -660,6 +679,28 @@
                 }
             });
         }
+
+        // ── User Activity Tracking (Heartbeat) ──
+        let currentPanel = "@(ViewContext.RouteData.Values["Action"]?.ToString() ?? "Home")";
+        
+        async function trackUserActivity() {
+            try {
+                await fetch('/Dashboard/TrackActivity', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(currentPanel),
+                    credentials: 'include'
+                });
+            } catch (err) {
+                console.warn('Activity tracking failed:', err);
+            }
+        }
+
+        // Track immediately on load
+        trackUserActivity();
+        
+        // Heartbeat every 30 seconds
+        setInterval(trackUserActivity, 30000);
     </script>
 </body>
 </html>
