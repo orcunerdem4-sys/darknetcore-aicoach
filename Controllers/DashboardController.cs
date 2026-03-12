@@ -1017,6 +1017,41 @@ public class DashboardController : Controller
         return startDate.AddDays(15).AddHours(9); // Fallback
     }
 
+    public async Task<IActionResult> Notebook()
+    {
+        var allFiles = await _dataService.GetFilesAsync();
+        ViewBag.AllFiles = allFiles.Where(f => f.Type != ResourceType.Folder).OrderByDescending(f => f.UploadDate).ToList();
+        return View();
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> GenerateNotebookResponse([FromBody] NotebookRequest request)
+    {
+        if (request == null || string.IsNullOrEmpty(request.Message) || request.SourceIds == null || !request.SourceIds.Any())
+        {
+            return Json(new { success = false, message = "Lütfen en az bir kaynak seçin ve mesajınızı yazın." });
+        }
+
+        var allFiles = await _dataService.GetFilesAsync();
+        var sources = allFiles.Where(f => request.SourceIds.Contains(f.Id)).ToList();
+
+        if (!sources.Any())
+        {
+            return Json(new { success = false, message = "Seçili kaynaklar bulunamadı." });
+        }
+
+        string response = await _geminiService.NotebookChatAsync(request.Message, sources, request.Mode ?? "chat");
+
+        return Json(new { success = true, response });
+    }
+
+    public class NotebookRequest
+    {
+        public string Message { get; set; } = string.Empty;
+        public List<string> SourceIds { get; set; } = new();
+        public string? Mode { get; set; } = "chat";
+    }
+
     public class ChatRequest
     {
         public string Message { get; set; } = string.Empty;

@@ -42,8 +42,64 @@ Example JSON: {{ ""topic"": ""Biology"", ""complexityScore"": 7, ""wordCount"": 
     }
 
     /// <summary>
-    /// Multi-turn chat with full user context (all files, lessons, schedule).
+    /// Specialized mode for Notebook (Akıllı Defter) which is strictly grounded in selected sources.
     /// </summary>
+    public async Task<string> NotebookChatAsync(
+        string userMessage,
+        List<UploadedFile> sources,
+        string mode = "chat") // modes: chat, study_guide, audio_overview, flashcards
+    {
+        if (string.IsNullOrEmpty(_apiKey)) return "⚠️ Gemini API anahtarı eksik.";
+
+        var sb = new StringBuilder();
+        sb.AppendLine("Sen 'Dopamind Akıllı Defter' asistanısın. Görevin, sağlanan kaynakları kullanarak kullanıcıya yardımcı olmaktır.");
+        sb.AppendLine("⚠️ KRİTİK KURAL: Sadece sağlanan kaynaklardaki bilgileri kullan. Eğer bilgi kaynaklarda yoksa, nazikçe 'Bu bilgi sağladığınız kaynaklarda bulunmuyor' de ve genel bilgi verme.");
+        sb.AppendLine("Yanıtlarında tablo, madde listeleri ve alıntılar kullanarak bilgiyi organize et.");
+        sb.AppendLine();
+
+        sb.AppendLine("📁 SEÇİLİ KAYNAKLAR:");
+        foreach (var source in sources)
+        {
+            sb.AppendLine($"- Dosya: {source.FileName}");
+            if (!string.IsNullOrEmpty(source.AnalysisSummary))
+                sb.AppendLine($"  Özet: {source.AnalysisSummary}");
+            if (!string.IsNullOrEmpty(source.Topic))
+                sb.AppendLine($"  Konu: {source.Topic}");
+            // In a real RAG system, we'd inject chunked content here. 
+            // For now, we rely on the metadata and potential future content extraction.
+            sb.AppendLine();
+        }
+
+        if (mode == "audio_overview")
+        {
+            sb.AppendLine("🎧 PODCAST SENARYOSU GÖREVİ:");
+            sb.AppendLine("Bu kaynakları tartışan iki uzman (Selin ve Can) arasında geçen 3-5 dakikalık bir podcast senaryosu yaz.");
+            sb.AppendLine("Dinamik, merak uyandırıcı ve eğitici bir ton kullan. Mizah katabilirsin. Format:");
+            sb.AppendLine("Selin: [Metin]");
+            sb.AppendLine("Can: [Metin]");
+            userMessage = "Seçili kaynaklara dayalı bir Audio Overview (Podcast) senaryosu oluştur.";
+        }
+        else if (mode == "study_guide")
+        {
+            sb.AppendLine("📖 ÇALIŞMA REHBERİ GÖREVİ:");
+            sb.AppendLine("Bu kaynakları özetleyen yapılandırılmış bir rehber oluştur. Bölümler: Ana Kavramlar, Önemli Tarihler/İsimler, Detaylı Analiz ve Sınavda Çıkabilecek Yerler.");
+            userMessage = "Seçili kaynaklara dayalı kapsamlı bir çalışma rehberi oluştur.";
+        }
+        else if (mode == "flashcards")
+        {
+            sb.AppendLine("🗂️ SORU-CEVAP KARTLARI GÖREVİ:");
+            sb.AppendLine("Kaynaklardaki en önemli bilgilerden 10 adet Soru-Cevap kartı hazırla. Format: [Soru] - [Cevap].");
+            userMessage = "Seçili kaynaklara dayalı soru-cevap kartları oluştur.";
+        }
+
+        var contents = new List<object> { new { role = "user", parts = new[] { new { text = sb.ToString() } } } };
+        contents.Add(new { role = "model", parts = new[] { new { text = "Anlaşıldı. Sadece bu kaynaklara sadık kalarak yanıt vereceğim. Nasıl yardımcı olabilirim?" } } });
+        contents.Add(new { role = "user", parts = new[] { new { text = userMessage } } });
+
+        // Use Pro model for deeper reasoning if available, otherwise fallback to flash
+        return await CallGeminiRawAsync(contents);
+    }
+
     public async Task<string> ChatAsync(
         string userMessage,
         List<UploadedFile> contextFiles,
