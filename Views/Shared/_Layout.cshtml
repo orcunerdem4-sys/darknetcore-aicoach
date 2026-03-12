@@ -155,7 +155,8 @@
                 </button>
                 @if (User.Identity != null && User.Identity.IsAuthenticated)
                 {
-                    <span class="me-3 fw-bold" style="color: var(--text-main);">@User.Identity.Name</span>
+                    <span class="me-3 fw-bold cursor-pointer" style="color: var(--text-main);" 
+                          data-bs-toggle="offcanvas" data-bs-target="#settingsOffcanvas">@User.Identity.Name</span>
                     <a asp-controller="Account" asp-action="Logout" class="btn btn-sm btn-outline-danger px-3" style="border-radius: 8px;">Çıkış Yap</a>
                 }
                 else
