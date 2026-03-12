@@ -26,14 +26,24 @@ public class AdminController : Controller
                 HttpOnly = true,
                 IsEssential = true
             });
-            return Content($"Basarili! Bu cihaz ({deviceName}) admin paneli icin yetkilendirildi.");
+            return Content($"<div style='background:#121212;color:#00ff00;height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:sans-serif;'>" +
+                           $"<h2>✅ Başarılı!</h2>" +
+                           $"<p>Bu cihaz ({deviceName}) admin paneli için yetkilendirildi.</p>" +
+                           $"<a href='/Admin' style='color:#fff;text-decoration:none;padding:10px 20px;border:1px solid #fff;border-radius:5px;'>Panele Git</a>" +
+                           $"<script>setTimeout(() => window.location.href='/Admin', 2000);</script></div>", "text/html");
         }
-        return Content("Yetkisiz islem.");
+        return Content("Yetkisiz işlem.");
     }
 
     public async Task<IActionResult> Index()
     {
-        // Yalnızca yetkilendirilmiş cihazlardan girişe izin ver
+        // 1. Kullanıcı kimliği kontrolü (Sadece senin hesabın)
+        if (User.Identity?.Name != "Beytullah")
+        {
+            return RedirectToAction("Index", "Dashboard");
+        }
+
+        // 2. Cihaz yetki kontrolü
         if (Request.Cookies["AdminDeviceAuth"] != "Authorized")
         {
             return RedirectToAction("Index", "Dashboard");
