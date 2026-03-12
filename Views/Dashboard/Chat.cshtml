@@ -159,6 +159,95 @@
     
     .chat-sidebar::-webkit-scrollbar { width: 4px; }
     .chat-sidebar::-webkit-scrollbar-thumb { background: var(--border-dim); border-radius: 10px; }
+
+    /* Suggestion chips */
+    .suggestion-btn {
+        background: var(--bg-card);
+        border: 1px solid var(--border-dim);
+        border-radius: 20px;
+        color: var(--text-main);
+        font-size: 0.85rem;
+        padding: 8px 16px;
+        text-align: left;
+        transition: all 0.15s;
+    }
+    .suggestion-btn:hover { border-color: var(--accent-green); background: var(--bg-input); }
+
+    /* ── AI Response Rich Styling ─────────────────── */
+    /* Tables */
+    .bubble-content table {
+        width: 100%;
+        border-collapse: collapse;
+        border-radius: 10px;
+        overflow: hidden;
+        margin: 12px 0;
+        font-size: 0.9rem;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+    .bubble-content table thead tr {
+        background: linear-gradient(135deg, #059669, #047857);
+        color: #fff;
+    }
+    .bubble-content table thead th {
+        padding: 9px 12px;
+        text-align: left;
+        font-weight: 600;
+        font-size: 0.82rem;
+        letter-spacing: 0.03em;
+    }
+    .bubble-content table tbody tr {
+        border-bottom: 1px solid var(--border-dim);
+        transition: background 0.15s;
+    }
+    .bubble-content table tbody tr:last-child { border-bottom: none; }
+    .bubble-content table tbody tr:hover { background: var(--bg-input); }
+    .bubble-content table tbody td {
+        padding: 8px 12px;
+        color: var(--text-main);
+        vertical-align: top;
+    }
+
+    /* Blockquote — task event boxes */
+    .bubble-content blockquote {
+        border-left: 3px solid var(--accent-green);
+        background: var(--bg-card);
+        border-radius: 0 10px 10px 0;
+        padding: 8px 14px;
+        margin: 8px 0;
+        color: var(--text-main);
+        font-size: 0.9rem;
+    }
+
+    /* Inline code — file name badges */
+    .bubble-content code {
+        background: rgba(5, 150, 105, 0.12);
+        color: #059669;
+        border-radius: 5px;
+        padding: 2px 6px;
+        font-size: 0.85em;
+        font-family: monospace;
+    }
+
+    /* Code blocks */
+    .bubble-content pre {
+        background: var(--bg-card);
+        border: 1px solid var(--border-dim);
+        border-radius: 10px;
+        padding: 12px 16px;
+        overflow-x: auto;
+        font-size: 0.85rem;
+        margin: 8px 0;
+    }
+    .bubble-content pre code {
+        background: none;
+        color: var(--text-main);
+        padding: 0;
+    }
+
+    /* Intensity selector on mobile */
+    @@media (max-width: 480px) {
+        #intensityGroup .btn { font-size: 0.72rem; padding: 4px 7px; }
+    }
 </style>
 
 <div class="chat-container">
@@ -656,7 +745,14 @@
 
         const time = new Date().toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
 
-
+        if (role !== 'user') {
+            // Add avatar for AI
+            const avatar = document.createElement('div');
+            avatar.className = 'ai-avatar-sm me-3 mt-1';
+            avatar.style.cssText = 'width:24px;height:24px;border-radius:50%;background:linear-gradient(135deg, #4285f4, #9b72cb);display:flex;align-items:center;justify-content:center;flex-shrink:0;';
+            avatar.innerHTML = '<i data-lucide="sparkles" size="14" style="color:white;"></i>';
+            wrapper.appendChild(avatar);
+        }
 
         const bubble = document.createElement('div');
         bubble.className = `chat-bubble ${role === 'user' ? 'user-bubble' : 'ai-bubble'}`;
@@ -677,7 +773,17 @@
         document.getElementById('emptyState')?.remove();
 
         chatMessages.insertBefore(wrapper, typingIndicator);
-        scrollToBottom();
+
+        // Scroll to TOP of the new AI message so user reads from beginning
+        if (role !== 'user') {
+            requestAnimationFrame(() => {
+                wrapper.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            });
+        } else {
+            scrollToBottom();
+        }
+
+        lucide.createIcons();
         return wrapper;
     }
 

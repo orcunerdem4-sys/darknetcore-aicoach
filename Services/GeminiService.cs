@@ -59,66 +59,48 @@ Example JSON: {{ ""topic"": ""Biology"", ""complexityScore"": 7, ""wordCount"": 
 
         // Build system context
         var sb = new StringBuilder();
-        sb.AppendLine("Sen 'AI Coach' isimli uzman bir kişisel ders asistanısın. Türkçe konuşuyorsun.");
-        sb.AppendLine("Kullanıcının tüm ders materyallerini, dosyalarını, görevlerini ve programını biliyorsun.");
-        sb.AppendLine("Bu bilgilerle kişiselleştirilmiş, somut öneriler sunuyorsun.");
+        sb.AppendLine("Sen 'Dopamind AI Coach' isimli akıllı bir kişisel asistansın. Türkçe konuşuyorsun.");
+        sb.AppendLine("Kullanıcının sistemdeki TÜM verilerine (takvim, dosyalar, ders programı, uyku kayıtları) erişimin var.");
+        sb.AppendLine("Yanıtların kısa, net ve görsel olarak zengin olmalı. Uzun paragraflar yerine tablolar ve kutucuklar kullan.");
         sb.AppendLine();
 
-        // Intensity Mode
-        var intensityDesc = intensityMode switch
+        // Intensity Mode - only hours/day guidance, no lifestyle prescriptions
+        var intensityHours = intensityMode switch
         {
-            "Light"  => "Hafif Tempo: Günlük maksimum 3-4 saat net ders çalışması. Dinlenmeye, sosyal hayata ve hobiye bol zaman bırak.",
-            "Normal" => "Normal Tempo: Günlük 5-6 saat net ders çalışması. Sosyal zaman ve dersler dengeli.",
-            "Intense"=> "Yoğun Tempo: Günlük 7-8 saat net ders çalışması. Dersler öncelikli ama uyku ve spor ihmal edilmez.",
-            "Max"    => "Maksimum Tempo: Günlük 9+ saat ders çalışması. Gerçek sınav dönemi modu. Minimum sosyal zaman.",
-            _        => "Normal Tempo: Günlük 5-6 saat net ders çalışması."
+            "Light"   => "3-4",
+            "Normal"  => "5-6",
+            "Intense" => "7-8",
+            "Max"     => "9+",
+            _         => "5-6"
         };
-        sb.AppendLine($"🎯 ÇALIŞMA YOGUNLUĞU: {intensityMode} → {intensityDesc}");
+        sb.AppendLine($"🎯 Seçili Çalışma Temposu: **{intensityMode}** — Günde yaklaşık {intensityHours} saat net çalışma.");
+        sb.AppendLine("→ Program yaparken bu süreyi hedef al; sistemdeki mevcut görevleri, ders saatlerini ve uyku verilerini dikkate alarak boşlukları doldur.");
         sb.AppendLine();
-        sb.AppendLine("⚠️ KRİTİK KURAL - GERÇEKÇİ PROGRAM YAPIMI:");
-        sb.AppendLine("Program yaparken yalnızca dersleri doldurmak YASAK. Aşağıdaki tüm bileşenleri MUTLAKA dahil et:");
-        sb.AppendLine("  - Uyku süresini dikkate al (kalkma + yatma saati)");
-        sb.AppendLine("  - Yemek araları (kahvaltı, öğle, akşam — her biri 30-45 dk)");
-        sb.AppendLine("  - Beden aktivitesi / spor bloğu (seçilen yoğunluğa göre 30-90 dk)");
-        sb.AppendLine("  - Kız arkadaşla/sosyal zaman (özellikle akşam saatlerinde, yoğunluğa göre)");
-        sb.AppendLine("  - Mola süreleri (her 45-90 dk çalışmada 10-15 dk mola)");
-        sb.AppendLine("  - Boş / serbest zaman tamponu");
-        sb.AppendLine("Kullanıcı senden program istediğinde, o gün/o haftaki VERİTABANINDAKİ görevleri, dersleri ve uyku kayıtlarını hesaba katarak üret.");
+
+        sb.AppendLine("📋 EXCEL DERS PROGRAMI KURALI:");
+        sb.AppendLine("'Dönem/Program/Schedule' gibi Excel dosyaları haftalık tekrar eden ders şablonlarıdır.");
+        sb.AppendLine("Tarih değil GÜN bazlı oku. İki sütun varsa İngilizce programı takip et.");
+        sb.AppendLine("İçerik okunabiliyorsa kullan; 'Synced from Drive' veya hata mesajı varsa kullanıcıya söyle.");
         sb.AppendLine();
-        sb.AppendLine("⚠️ ÖNEMLI KURAL - Excel Ders Programı Yorumlama:");
-        sb.AppendLine("Yüklenen Excel dosyaları (özellikle 'Dönem', 'Program', 'Schedule' gibi isimler taşıyanlar)");
-        sb.AppendLine("ÜNİVERSİTE HAFTALIK DERS PROGRAMI ŞABLONLARIdır. Bu dosyalar:");
-        sb.AppendLine("- Belirli bir tarihe değil, haftanın günlerine (Pazartesi, Salı... / Mon, Tue...) göre organize edilmiştir.");
-        sb.AppendLine("- Her hafta tekrar eden dersleri gösterir. Dosyada 'Feb 9-13' gibi bir tarih görüyorsan bu yalnızca örnek haftadır.");
-        sb.AppendLine("- 'Yarın Salı' diye sorulduğunda: dosyadaki SALI sütununa/satırına bak, tarihe değil GÜNE göre yanıtla.");
-        sb.AppendLine("- Dosyada iki sütun yan yana varsa (Türkçe program | İngilizce program), kullanıcı İngilizce programı takip ediyor.");
-        sb.AppendLine("- EĞER sana verilen dosya özetinde (AnalysisSummary) saatler veya ders içerikleri varsa bunlara dayanarak analiz yap.");
-        sb.AppendLine("- EĞER 'Synced from Drive' dışında hiçbir içerik yoksa veya 'Hata' mesajı görüyorsan, kullanıcıya içeriği okuyamadığını dürüstçe söyle.");
 
         if (sleepRecords != null && sleepRecords.Any())
         {
             var avgSleep = Math.Round(sleepRecords.Average(s => s.TotalHours), 1);
             var latest = sleepRecords.OrderByDescending(s => s.SleepEnd).FirstOrDefault();
-            sb.AppendLine("😴 Uyku Verileri (Son 7 Gün):");
-            sb.AppendLine($"  - Ortalama uyku: {avgSleep} saat/gece");
+            sb.AppendLine($"😴 Uyku (Son 7 Gün): Ortalama {avgSleep} saat/gece.");
             if (latest != null)
             {
                 var turkeyTz2 = TimeZoneInfo.FindSystemTimeZoneById(
                     OperatingSystem.IsWindows() ? "Turkey Standard Time" : "Europe/Istanbul");
-                var sleepStart = TimeZoneInfo.ConvertTimeFromUtc(DateTime.SpecifyKind(latest.SleepStart, DateTimeKind.Utc), turkeyTz2);
                 var sleepEnd = TimeZoneInfo.ConvertTimeFromUtc(DateTime.SpecifyKind(latest.SleepEnd, DateTimeKind.Utc), turkeyTz2);
-                sb.AppendLine($"  - Son uyku: {sleepStart:HH:mm} → {sleepEnd:HH:mm} ({latest.TotalHours:F1} saat)");
-                sb.AppendLine($"  - Kalıcı kalkış saati tahmini: {sleepEnd:HH:mm}");
+                sb.AppendLine($"  Son kalkış tahmini: ~{sleepEnd:HH:mm} → Program bu saatten başlatılabilir.");
             }
-            sb.AppendLine("  → Program yaparken bu kalkış saatinden başlayan bloklar öner.");
             sb.AppendLine();
         }
 
         if (lessons != null && lessons.Any())
         {
-            sb.AppendLine("📚 Kullanıcının Dersleri:");
-            foreach (var l in lessons)
-                sb.AppendLine($"  - {l.Name}");
+            sb.AppendLine("📚 Kayıtlı Dersler: " + string.Join(", ", lessons.Select(l => l.Name)));
             sb.AppendLine();
         }
 
@@ -126,15 +108,16 @@ Example JSON: {{ ""topic"": ""Biology"", ""complexityScore"": 7, ""wordCount"": 
         var filesToShow = allFiles?.Where(f => f.Type != ResourceType.Folder).ToList();
         if (filesToShow != null && filesToShow.Any())
         {
-            sb.AppendLine(" Kullanıcının Tüm Yüklü Dosyaları:");
+            sb.AppendLine("📁 Yüklü Dosyalar:");
             foreach (var f in filesToShow)
             {
-                sb.Append($"  • [{f.Type}] {f.FileName}");
-                if (!string.IsNullOrEmpty(f.Topic)) sb.Append($" | Konu: {f.Topic}");
-                if (!string.IsNullOrEmpty(f.AnalysisSummary)) sb.Append($" | Özet: {f.AnalysisSummary}");
-                if (f.EstimatedStudyTime > 0) sb.Append($" | Süre: {f.EstimatedStudyTime}s");
-                if (f.ComplexityScore > 0) sb.Append($" | Zorluk: {f.ComplexityScore}/10");
-                if (!string.IsNullOrEmpty(f.Url)) sb.Append($" | Link: {f.Url}");
+                sb.Append($"  • [{f.Type}] **{f.FileName}**");
+                if (!string.IsNullOrEmpty(f.Topic)) sb.Append($" ({f.Topic})");
+                if (f.EstimatedStudyTime > 0) sb.Append($" ~{f.EstimatedStudyTime}s");
+                if (f.ComplexityScore > 0) sb.Append($" Zorluk:{f.ComplexityScore}/10");
+                if (!string.IsNullOrEmpty(f.AnalysisSummary) && f.AnalysisSummary.Length < 200)
+                    sb.Append($" | {f.AnalysisSummary.Substring(0, Math.Min(200, f.AnalysisSummary.Length))}");
+                if (!string.IsNullOrEmpty(f.Url)) sb.Append($" | {f.Url}");
                 sb.AppendLine();
             }
             sb.AppendLine();
@@ -142,9 +125,7 @@ Example JSON: {{ ""topic"": ""Biology"", ""complexityScore"": 7, ""wordCount"": 
 
         if (contextFiles.Any())
         {
-            sb.AppendLine("🎯 Şu an odaklanılan dosyalar:");
-            foreach (var f in contextFiles)
-                sb.AppendLine($"  - {f.FileName}");
+            sb.AppendLine("🎯 Odaklanılan dosyalar: " + string.Join(", ", contextFiles.Select(f => f.FileName)));
             sb.AppendLine();
         }
 
@@ -155,16 +136,18 @@ Example JSON: {{ ""topic"": ""Biology"", ""complexityScore"": 7, ""wordCount"": 
             sb.AppendLine();
         }
 
-        sb.AppendLine("Yanıtlarında markdown kullan. Kısa ve net ol.");
-        sb.AppendLine("Kullanıcı dosyalarını sorarsa yukarıdaki listedeki 'Özet' (AnalysisSummary) kısmına bakarak cevap ver. İçerik verilmişse o dosyayı 'okuyabildiğini' varsay ve konuyu derinleştir.");
+        sb.AppendLine("─── YANIT FORMATI KURALLARI ───");
+        sb.AppendLine("1. PROGRAM/TABLO: Ders programları, haftalık planlar, zaman blokları → MUTLAKA markdown tablosu kullan (| Saat | Aktivite | Not |).");
+        sb.AppendLine("2. GÖREV KARTLARI: Takvime eklenen/çıkarılan görevler → JSON bloğundan önce `> 📌 [Görev Adı] — [Tarih]` şeklinde alıntı satırı ile özetle.");
+        sb.AppendLine("3. DOSYA ADI: Bir dosyadan bahsederken `dosya_adi.pdf` şeklinde kod formatında yaz.");
+        sb.AppendLine("4. UZUN YAZILARDAN KAÇIN: Madde listesi veya tablo kullan. Paragraf ancak açıklama gerektirdiğinde.");
+        sb.AppendLine("5. KISA TUT: Yanıtlar mümkün olduğunca öz olsun. Kullanıcı zaten verileri biliyor; analiz ve yönlendirme ver.");
         sb.AppendLine();
-        sb.AppendLine("🛠️ KOMUT KURALLARI (GÖREV EKLEME/SİLME):");
-        sb.AppendLine("Eğer takvime bir şey eklemen veya silmen gerekiyorsa:");
-        sb.AppendLine("1. MUTLAKA ```json ve ``` işaretlerini kullan. Bu işaretler olmadan komutların ÇALIŞMAZ.");
-        sb.AppendLine("2. Her görev için AYRI bir ```json bloğu yaz.");
-        sb.AppendLine("3. Örnek Ekleme: ```json\n{ \"command\": \"add_task\", \"title\": \"Matematik Ödevi\", \"date\": \"2026-03-11T14:00:00\", \"durationHours\": 2.0, \"priority\": \"High\", \"difficultyScore\": 7, \"difficultyReason\": \"Anatomi ezberi yoğun olduğu için bölünmeden 2 saat çalışılmalı.\" }\n```");
-        sb.AppendLine("4. Örnek Silme: ```json\n{ \"command\": \"remove_task\", \"title\": \"Matematik Ödevi\" }\n```");
-        sb.AppendLine("⚠️ ÖNEMLİ: JSON bloğunu ekledikten sonra kullanıcıya sadece 1-2 cümlelik nezaket dolu bir onay mesajı ver. JSON içeriğini mesajın içinde HAM METİN olarak asla tekrar etme.");
+        sb.AppendLine("🛠️ GÖREV EKLEME/SİLME KOMUTLARI:");
+        sb.AppendLine("Takvime işlem yapman gerekiyorsa MUTLAKA ```json ve ``` kullan (aksi takdirde çalışmaz).");
+        sb.AppendLine("Her görev için ayrı ```json bloğu. Ekledikten sonra 1-2 cümle onay mesajı ver.");
+        sb.AppendLine("Örnek: ```json\n{ \"command\": \"add_task\", \"title\": \"Farmakoloji Tekrar\", \"date\": \"2026-03-13T14:00:00\", \"durationHours\": 1.5, \"priority\": \"High\", \"difficultyScore\": 7, \"difficultyReason\": \"Yoğun konu.\" }\n```");
+        sb.AppendLine("⚠️ JSON bloğunu yazdıktan sonra ham metnini mesajda asla tekrar etme.");
 
         var systemPrompt = sb.ToString();
 
