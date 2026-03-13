@@ -3,6 +3,7 @@ document.addEventListener('DOMContentLoaded', function () {
     var calendarEl = document.getElementById('calendar');
     var calendar = new FullCalendar.Calendar(calendarEl, {
         initialView: 'dayGridMonth',
+        firstDay: 1, // Start on Monday
         headerToolbar: {
             left: 'prev,next today',
             center: 'title',
@@ -14,9 +15,13 @@ document.addEventListener('DOMContentLoaded', function () {
         selectable: true,
         selectMirror: true,
         expandRows: true,
+        dayMaxEvents: true, // Prevent squashing, show "more" link
         height: 'auto',
         contentHeight: 600,
         longPressDelay: 350, // Mobile touch support
+        dateClick: function(info) {
+            showDayDetails(info.dateStr);
+        },
         select: function (info) {
             const dateInput = document.getElementById('taskDate');
             if (dateInput) {
@@ -26,10 +31,13 @@ document.addEventListener('DOMContentLoaded', function () {
                 }
                 dateInput.value = defaultDate.substring(0, 16);
             }
+            showDayDetails(info.startStr.split('T')[0]);
             var myModal = new bootstrap.Modal(document.getElementById('addTaskModal'));
             myModal.show();
         },
         eventClick: function (info) {
+            showDayDetails(info.event.startStr.split('T')[0]);
+            
             // Fill detail modal
             document.getElementById('taskDetailTitle').textContent = info.event.title;
             const dateStr = info.event.start.toLocaleString();
@@ -153,7 +161,7 @@ document.addEventListener('DOMContentLoaded', function () {
                                 </small>
                             </div>
                             <div class="d-flex flex-column align-items-end gap-1">
-                                <span class="badge ${badgeClass}" style="min-width: 60px;">Zorluk: ${badgeLabel}</span>
+                                <span class="badge ${badgeClass}" style="min-width: 60px;">Zorluk Seviyesi: ${badgeLabel}</span>
                                 <button type="button" class="btn btn-sm btn-light rounded-circle p-1" 
                                         data-bs-toggle="tooltip" 
                                         data-bs-placement="top" 
@@ -296,6 +304,56 @@ document.addEventListener('DOMContentLoaded', function () {
                 if (indicator) indicator.classList.add('d-none');
                 appendMessage('AI', 'Network error. Please try again.');
             });
+    }
+
+    function showDayDetails(dateStr) {
+        const panel = document.getElementById('dayDetailPanel');
+        const display = document.getElementById('selectedDateDisplay');
+        const text = document.getElementById('focusedDateText');
+        const list = document.getElementById('dayTaskList');
+        
+        if(!panel || !list) return;
+
+        panel.style.display = 'block';
+        display.style.display = 'flex';
+        text.textContent = formatDateTurkish(dateStr);
+        window.focusedDate = dateStr;
+
+        fetch('/Dashboard/GetTasks')
+            .then(r => r.json())
+            .then(tasks => {
+                const dayTasks = tasks.filter(t => (t.dueDate || t.start).split('T')[0] === dateStr);
+                list.innerHTML = '';
+                
+                if(dayTasks.length === 0) {
+                    list.innerHTML = '<div class="text-center text-muted small py-4">Bu güne ait görev yok.</div>';
+                    return;
+                }
+
+                dayTasks.forEach(task => {
+                    const badgeClass = getPriorityBadge(task.priority);
+                    const badgeLabel = getPriorityLabel(task.priority);
+                    const div = document.createElement('div');
+                    div.className = 'list-group-item bg-transparent border-0 border-bottom py-3 px-0';
+                    div.innerHTML = `
+                        <div class="d-flex align-items-center gap-2 mb-2">
+                            <input class="form-check-input" type="checkbox" ${task.isCompleted ? 'checked' : ''} 
+                                   onchange="toggleTaskComplete('${task.id}', this.checked)" style="width:1rem; height:1rem;">
+                            <span class="fw-bold small ${task.isCompleted ? 'text-decoration-line-through opacity-50' : ''}">${task.title}</span>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span class="badge ${badgeClass}" style="font-size: 0.65rem;">${badgeLabel}</span>
+                            <small class="text-muted" style="font-size: 0.7rem;">${new Date(task.dueDate || task.start).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</small>
+                        </div>
+                    `;
+                    list.appendChild(div);
+                });
+            });
+    }
+
+    function formatDateTurkish(dateStr) {
+        const date = new Date(dateStr);
+        return date.toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', weekday: 'long' });
     }
 });
 

@@ -286,4 +286,35 @@ body.light-theme {
 
 .materials-list::-webkit-scrollbar {
     width: 4px;
-}
+}
+
+/* Day Detail Panel Styles */
+#dayDetailPanel {
+    transition: all 0.3s ease;
+}
+
+.dark-theme #dayDetailPanel {
+    border-color: var(--border-dim) !important;
+}
+
+#dayTaskList .list-group-item:hover {
+    background: var(--bg-input) !important;
+    border-radius: 8px;
+}
+
+/* Calendar Cell Height */
+.fc-daygrid-day-frame {
+    min-height: 100px !important;
+}
+
+.fc-daygrid-event {
+    border-radius: 4px !important;
+    padding: 2px 5px !important;
+    font-size: 0.75rem !important;
+}
+
+.fc-more-link {
+    font-weight: bold;
+    color: var(--accent-primary) !important;
+}
+

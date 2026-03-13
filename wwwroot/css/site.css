@@ -248,17 +248,39 @@ a {
 /* Form Controls Overrides for Dark Mode */
 .form-control,
 .form-select {
-    background-color: #fff !important;
+    background-color: var(--bg-secondary) !important;
     border-color: var(--border-color) !important;
     color: var(--text-primary) !important;
 }
 
 .form-control:focus,
 .form-select:focus {
-    background-color: #fff !important;
+    background-color: var(--bg-secondary) !important;
     border-color: var(--accent-primary) !important;
     color: var(--text-primary) !important;
     box-shadow: 0 0 0 0.25rem rgba(5, 150, 105, 0.25) !important;
+}
+
+.form-control::placeholder {
+    color: var(--text-secondary) !important;
+    opacity: 0.6;
+}
+
+/* Dark Theme Specific Input Fixes */
+.dark-theme .form-control,
+.dark-theme .form-select {
+    background-color: var(--bg-input) !important;
+    color: var(--text-main) !important;
+}
+
+.dark-theme .form-control::placeholder {
+    color: var(--text-muted) !important;
+}
+
+/* DateTime Picker Icon Fix for Dark Mode */
+.dark-theme input[type="datetime-local"]::-webkit-calendar-picker-indicator {
+    filter: invert(1);
+    cursor: pointer;
 }
 
 .form-label {
