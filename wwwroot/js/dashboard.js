@@ -161,12 +161,12 @@ document.addEventListener('DOMContentLoaded', function () {
                                 </small>
                             </div>
                             <div class="d-flex flex-column align-items-end gap-1">
-                                <span class="badge ${badgeClass}" style="min-width: 60px;">Zorluk Seviyesi: ${badgeLabel}</span>
+                                <span class="badge ${badgeClass}" style="min-width: 60px;">Öncelik: ${badgeLabel}</span>
                                 <button type="button" class="btn btn-sm btn-light rounded-circle p-1" 
                                         data-bs-toggle="tooltip" 
                                         data-bs-placement="top" 
                                         data-bs-custom-class="custom-tooltip"
-                                        title="Zorluk ${difficultyScore}/10: ${difficultyReason}">
+                                        title="Zorluk Seviyesi ${difficultyScore}/10: ${difficultyReason}">
                                     <i data-lucide="info" size="16" class="text-primary"></i>
                                 </button>
                             </div>
