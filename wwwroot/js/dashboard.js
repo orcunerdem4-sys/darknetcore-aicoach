@@ -137,50 +137,58 @@ document.addEventListener('DOMContentLoaded', function () {
         fetch('/Dashboard/GetTasks')
             .then(response => response.json())
             .then(tasks => {
-                const list = document.getElementById('taskList');
-                list.innerHTML = '';
-                tasks.forEach(task => {
-                    const item = document.createElement('a');
-                    item.className = 'list-group-item list-group-item-action bg-transparent border-secondary d-flex justify-content-between align-items-center mb-1 rounded';
+                const todayList = document.getElementById('todayTaskList');
+                const upcomingList = document.getElementById('upcomingTaskList');
+                if (!todayList || !upcomingList) return;
 
-                    // Priority Badge
+                todayList.innerHTML = '';
+                upcomingList.innerHTML = '';
+
+                const now = new Date();
+                const todayStr = now.toISOString().split('T')[0];
+
+                tasks.forEach(task => {
+                    const taskDate = (task.dueDate || task.start).split('T')[0];
+                    const isToday = taskDate === todayStr;
+                    
+                    const item = document.createElement('a');
+                    item.className = 'list-group-item list-group-item-action bg-transparent border-secondary d-flex justify-content-between align-items-center mb-1 rounded p-2';
+
                     const badgeClass = getPriorityBadge(task.priority);
                     const badgeLabel = getPriorityLabel(task.priority);
-
-                    // Difficulty Tooltip
                     const difficultyScore = task.difficultyScore || 3;
-                    const difficultyReason = task.difficultyReason || "Standart görev.";
 
                     item.innerHTML = `
                         <div class="d-flex align-items-center gap-2 pe-2 w-100">
-                            <input class="form-check-input mb-0" type="checkbox" ${task.isCompleted ? 'checked' : ''} onchange="toggleTaskComplete('${task.id}', this.checked)" style="width:1.2rem; height:1.2rem; cursor:pointer;" title="Görevi Tamamla">
+                            <div class="rounded-circle ${badgeClass}" style="width: 10px; height: 10px; flex-shrink: 0;" title="Öncelik: ${badgeLabel}"></div>
+                            <input class="form-check-input mb-0" type="checkbox" ${task.isCompleted ? 'checked' : ''} onchange="toggleTaskComplete('${task.id}', this.checked)" style="width:1.1rem; height:1.1rem; cursor:pointer;" title="Görevi Tamamla">
                             <div class="flex-grow-1" style="${task.isCompleted ? 'text-decoration: line-through; opacity: 0.7;' : ''}">
-                                <h6 class="mb-0 text-dark fw-bold" style="font-size: 0.95rem;">${task.title}</h6>
-                                <small class="text-secondary d-flex align-items-center mt-1" style="font-size: 0.8rem;">
-                                    <i data-lucide="clock" size="14" class="me-1"></i>${formatRelativeTime(task.dueDate || task.start)}
+                                <h6 class="mb-0 text-dark fw-bold" style="font-size: 0.9rem;">${task.title}</h6>
+                                <small class="text-secondary d-flex align-items-center mt-1" style="font-size: 0.75rem;">
+                                    <i data-lucide="clock" size="12" class="me-1"></i>${formatRelativeTime(task.dueDate || task.start)}
                                 </small>
                             </div>
-                            <div class="d-flex flex-column align-items-end gap-1">
-                                <span class="badge ${badgeClass}" style="min-width: 60px;">Öncelik: ${badgeLabel}</span>
-                                <button type="button" class="btn btn-sm btn-light rounded-circle p-1" 
-                                        data-bs-toggle="tooltip" 
-                                        data-bs-placement="top" 
-                                        data-bs-custom-class="custom-tooltip"
-                                        title="Zorluk Seviyesi ${difficultyScore}/10: ${difficultyReason}">
-                                    <i data-lucide="info" size="16" class="text-primary"></i>
-                                </button>
+                            <div class="text-end">
+                                <span class="badge bg-secondary-subtle text-secondary border" style="font-size: 0.65rem;">Zorluk Seviyesi: ${difficultyScore}/10</span>
                             </div>
                         </div>
                     `;
-                    list.appendChild(item);
-                });
-                lucide.createIcons();
 
-                // Initialize tooltips
-                var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
-                var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
-                    return new bootstrap.Tooltip(tooltipTriggerEl);
+                    if (isToday) {
+                        todayList.appendChild(item);
+                    } else if (new Date(taskDate) > now || taskDate > todayStr) {
+                        upcomingList.appendChild(item);
+                    }
                 });
+
+                if (todayList.children.length === 0) {
+                    todayList.innerHTML = '<div class="text-center text-muted small py-3">Bugün için görev yok.</div>';
+                }
+                if (upcomingList.children.length === 0) {
+                    upcomingList.innerHTML = '<div class="text-center text-muted small py-3">Yaklaşan görev yok.</div>';
+                }
+
+                lucide.createIcons();
             });
     }
 
@@ -333,16 +341,18 @@ document.addEventListener('DOMContentLoaded', function () {
                 dayTasks.forEach(task => {
                     const badgeClass = getPriorityBadge(task.priority);
                     const badgeLabel = getPriorityLabel(task.priority);
+                    const difficultyScore = task.difficultyScore || 3;
                     const div = document.createElement('div');
                     div.className = 'list-group-item bg-transparent border-0 border-bottom py-3 px-0';
                     div.innerHTML = `
                         <div class="d-flex align-items-center gap-2 mb-2">
+                            <div class="rounded-circle ${badgeClass}" style="width: 8px; height: 8px; flex-shrink: 0;" title="Öncelik: ${badgeLabel}"></div>
                             <input class="form-check-input" type="checkbox" ${task.isCompleted ? 'checked' : ''} 
                                    onchange="toggleTaskComplete('${task.id}', this.checked)" style="width:1rem; height:1rem;">
                             <span class="fw-bold small ${task.isCompleted ? 'text-decoration-line-through opacity-50' : ''}">${task.title}</span>
                         </div>
                         <div class="d-flex justify-content-between align-items-center">
-                            <span class="badge ${badgeClass}" style="font-size: 0.65rem;">${badgeLabel}</span>
+                            <span class="badge bg-secondary-subtle text-secondary border" style="font-size: 0.6rem;">Zorluk Seviyesi: ${difficultyScore}/10</span>
                             <small class="text-muted" style="font-size: 0.7rem;">${new Date(task.dueDate || task.start).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</small>
                         </div>
                     `;

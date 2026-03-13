@@ -84,10 +84,10 @@
         <!-- Right Sidebar (Task Management & AI Chat) -->
         <div class="col-lg-4 d-flex flex-column gap-4">
 
-            <!-- Günlük Özet Paneli (Combined Streaks, Sleep, Tasks) -->
-            <div class="glass-panel p-4 flex-grow-1 d-flex flex-column" style="min-height: 400px; max-height: 500px;">
+            <!-- Bugünün Özeti Paneli (Combined Streaks, Sleep, Today's Tasks) -->
+            <div class="glass-panel p-4 flex-grow-1 d-flex flex-column" style="min-height: 350px; max-height: 450px;">
                 <h5 class="mb-3 d-flex justify-content-between align-items-center fw-bold">
-                    <span><i data-lucide="activity" class="me-2 text-primary"></i>Günlük Özet</span>
+                    <span><i data-lucide="activity" class="me-2 text-primary"></i>Bugünün Özeti</span>
                 </h5>
                 
                 <!-- Streak & Sleep Mini Cards inside the Panel -->
@@ -121,13 +121,23 @@
                 </div>
 
                 <div class="d-flex justify-content-between align-items-center mb-2 mt-2">
-                    <h6 class="mb-0 text-dark fw-bold" style="font-size: 0.9rem;">Yaklaşan Görevler</h6>
+                    <h6 class="mb-0 text-dark fw-bold" style="font-size: 0.9rem;">Bugünkü Görevler</h6>
                     <button class="btn btn-sm btn-outline-primary rounded-circle p-1" style="width: 24px; height: 24px; display: flex; align-items: center; justify-content: center;" data-bs-toggle="modal" data-bs-target="#addTaskModal" title="Hızlı Görev Ekle">
                         <i data-lucide="plus" size="14"></i>
                     </button>
                 </div>
-                <div id="taskList" class="list-group list-group-flush flex-grow-1" style="overflow-y: auto;">
-                    <!-- Tasks will be loaded here via JS -->
+                <div id="todayTaskList" class="list-group list-group-flush flex-grow-1" style="overflow-y: auto;">
+                    <!-- Tasks for today will be loaded here via JS -->
+                </div>
+            </div>
+
+            <!-- Yaklaşan Görevler Paneli -->
+            <div class="glass-panel p-4 d-flex flex-column" style="min-height: 250px; max-height: 350px;">
+                <h5 class="mb-3 d-flex justify-content-between align-items-center fw-bold">
+                    <span><i data-lucide="calendar-clock" class="me-2 text-primary"></i>Yaklaşan Görevler</span>
+                </h5>
+                <div id="upcomingTaskList" class="list-group list-group-flush flex-grow-1" style="overflow-y: auto;">
+                    <!-- Future tasks will be loaded here via JS -->
                 </div>
             </div>
 
