@@ -463,7 +463,7 @@ public class DashboardController : Controller
                     var rowData = new List<string>();
                     for (int i = 1; i <= maxCol; i++)
                     {
-                        var val = row.Cell(i).GetValue<string>()?.Trim() ?? "";
+                        var val = row.Cell(i).GetString()?.Trim() ?? "";
                         var colLetter = sheet.Column(i).ColumnLetter();
                         rowData.Add($"[{colLetter}]: " + (string.IsNullOrEmpty(val) ? "(boş)" : val));
                     }
@@ -706,10 +706,11 @@ public class DashboardController : Controller
             else if (extension == ".docx" || extension == ".doc") content = ReadDocxContent(tempPath);
             else if (extension == ".pptx" || extension == ".ppt") content = ReadPptxContent(tempPath);
             else if (extension == ".csv" || extension == ".txt") content = await System.IO.File.ReadAllTextAsync(tempPath);
+            else if (extension == ".xlsx" || extension == ".xls") content = ReadExcelContent(tempPath, fileName);
             else content = "Bu format henüz derinlemesine analiz edilemiyor.";
 
             System.IO.File.Delete(tempPath);
-            return content.Length > 20000 ? content[..20000] + "..." : content;
+            return content.Length > 150000 ? content[..150000] + "..." : content;
         }
         catch (Exception ex)
         {

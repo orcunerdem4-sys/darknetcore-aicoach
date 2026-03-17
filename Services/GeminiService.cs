@@ -134,8 +134,9 @@ Example JSON: {{ ""topic"": ""Biology"", ""complexityScore"": 7, ""wordCount"": 
         sb.AppendLine();
 
         sb.AppendLine("📋 EXCEL DERS PROGRAMI KURALI:");
-        sb.AppendLine("'Dönem/Program/Schedule' gibi Excel dosyaları haftalık tekrar eden ders şablonlarıdır.");
-        sb.AppendLine("Tarih değil GÜN bazlı oku. İki sütun varsa İngilizce programı takip et.");
+        sb.AppendLine("Excel belgeleri olarak yüklenen ders programları, akademik takvime göre tarihleri içeren tablolardır.");
+        sb.AppendLine("Tüm sayfaları/tarihleri okuyarak GÜNCEL haftayı ve bugünün tarihini bul. Programı haftalık ve günlük bazda doğru tarihle eşleştirerek kullan.");
+        sb.AppendLine("Tarih bulamazsan veya genel bir iskeletse gün isimlerine (Pazartesi, Salı vb.) göre eşleştir.");
         sb.AppendLine("İçerik okunabiliyorsa kullan; 'Synced from Drive' veya hata mesajı varsa kullanıcıya söyle.");
         sb.AppendLine();
 
@@ -171,18 +172,62 @@ Example JSON: {{ ""topic"": ""Biology"", ""complexityScore"": 7, ""wordCount"": 
                 if (!string.IsNullOrEmpty(f.Topic)) sb.Append($" ({f.Topic})");
                 if (f.EstimatedStudyTime > 0) sb.Append($" ~{f.EstimatedStudyTime}s");
                 if (f.ComplexityScore > 0) sb.Append($" Zorluk:{f.ComplexityScore}/10");
-                if (!string.IsNullOrEmpty(f.AnalysisSummary) && f.AnalysisSummary.Length < 200)
-                    sb.Append($" | {f.AnalysisSummary.Substring(0, Math.Min(200, f.AnalysisSummary.Length))}");
+                if (!string.IsNullOrEmpty(f.AnalysisSummary))
+                {
+                    var summaryText = f.AnalysisSummary.Replace("\n", " ");
+                    if (summaryText.Contains("AI Özet:")) 
+                        summaryText = summaryText.Substring(summaryText.IndexOf("AI Özet:"));
+                    sb.Append($" | Özet: {summaryText.Substring(0, Math.Min(250, summaryText.Length))}");
+                }
                 if (!string.IsNullOrEmpty(f.Url)) sb.Append($" | {f.Url}");
                 sb.AppendLine();
             }
             sb.AppendLine();
+
+            // Inject full parsed content for schedule/excel files so AI can read actual class data
+            var scheduleFiles = filesToShow.Where(f =>
+                !string.IsNullOrEmpty(f.AnalysisSummary) &&
+                f.AnalysisSummary.Length > 200 &&
+                !f.AnalysisSummary.StartsWith("External resource") &&
+                (f.FileName.Contains(".xlsx") || f.FileName.Contains(".xls") ||
+                 f.FileName.ToLower().Contains("dönem") || f.FileName.ToLower().Contains("program") ||
+                 f.FileName.ToLower().Contains("schedule") || f.FileName.ToLower().Contains("takvim"))
+            ).ToList();
+
+            if (scheduleFiles.Any())
+            {
+                sb.AppendLine("📋 DERS PROGRAMI İÇERİKLERİ (Tam metin — dersleri buradan oku):");
+                foreach (var f in scheduleFiles)
+                {
+                    sb.AppendLine($"=== {f.FileName} ===");
+                    var snippet = f.AnalysisSummary!.Length > 150000
+                        ? f.AnalysisSummary[..150000] + "\n...(devamı kısaltıldı)"
+                        : f.AnalysisSummary;
+                    sb.AppendLine(snippet);
+                    sb.AppendLine();
+                }
+            }
         }
 
         if (contextFiles.Any())
         {
-            sb.AppendLine("🎯 Odaklanılan dosyalar: " + string.Join(", ", contextFiles.Select(f => f.FileName)));
-            sb.AppendLine();
+            sb.AppendLine("🎯 ODAKLANILAN DOSYALAR (Bu dosyaların içeriklerine tam hakimsin):");
+            foreach (var cf in contextFiles)
+            {
+                if (!string.IsNullOrEmpty(cf.AnalysisSummary))
+                {
+                    sb.AppendLine($"--- {cf.FileName} İçeriği ---");
+                    var snippet = cf.AnalysisSummary.Length > 150000 
+                        ? cf.AnalysisSummary[..150000] + "\n...(devamı)" 
+                        : cf.AnalysisSummary;
+                    sb.AppendLine(snippet);
+                    sb.AppendLine();
+                }
+                else
+                {
+                    sb.AppendLine($"--- {cf.FileName} İçeriği ---\n(İçerik okunamadı veya boş)\n");
+                }
+            }
         }
 
         if (!string.IsNullOrEmpty(userScheduleContext))
@@ -198,6 +243,7 @@ Example JSON: {{ ""topic"": ""Biology"", ""complexityScore"": 7, ""wordCount"": 
         sb.AppendLine("3. DOSYA ADI: Bir dosyadan bahsederken `dosya_adi.pdf` şeklinde kod formatında yaz.");
         sb.AppendLine("4. UZUN YAZILARDAN KAÇIN: Madde listesi veya tablo kullan. Paragraf ancak açıklama gerektirdiğinde.");
         sb.AppendLine("5. KISA TUT: Yanıtlar mümkün olduğunca öz olsun. Kullanıcı zaten verileri biliyor; analiz ve yönlendirme ver.");
+        sb.AppendLine("6. İNTERNET ERİŞİMİ YOK (404 HATASI VERME): Kendi başına URL'leri veya linkleri ziyaret edemezsin. '404 Not Found' hatası aldığını SÖYLEME. İçerikler sana doğrudan (özet veya tam metin olarak) yukarıda verilmiştir. Göremediklerin için 'içerik aktarılmadı' diyebilirsin ama asla linke gitmeye çalıştığını söyleme.");
         sb.AppendLine();
         sb.AppendLine("🛠️ GÖREV EKLEME/SİLME KOMUTLARI:");
         sb.AppendLine("Takvime işlem yapman gerekiyorsa MUTLAKA ```json ve ``` kullan (aksi takdirde çalışmaz).");

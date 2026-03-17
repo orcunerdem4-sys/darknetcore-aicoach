@@ -1,273 +1,842 @@
 @{
     ViewData["Title"] = "Akıllı Defter";
     var allFiles = ViewBag.AllFiles as List<DarkNetCore.Models.UploadedFile> ?? new();
+    var recentFiles = ViewBag.RecentFiles as List<DarkNetCore.Models.UploadedFile> ?? new();
 }
 
-<style>
-    body { background-color: var(--bg-body); color: var(--text-main); font-family: 'Outfit', sans-serif; overflow: hidden; height: 100dvh; margin: 0; }
-    .notebook-container { display: flex; height: 100%; width: 100%; background: var(--bg-body); overflow: hidden; }
+@section Styles {
+    <style>
+        .notebook-layout {
+            display: flex;
+            height: calc(100vh - 70px);
+            background-color: var(--bg-body);
+            overflow: hidden;
+            font-family: 'Outfit', sans-serif;
+            color: var(--text-main);
+        }
+
+        /* --- LEFT SIDEBAR: RESOURCES & FILES --- */
+        .notebook-sidebar {
+            width: 280px;
+            background-color: var(--bg-card);
+            border-right: 1px solid var(--border-dim);
+            display: flex;
+            flex-direction: column;
+            flex-shrink: 0;
+            transition: all 0.3s ease;
+            z-index: 1000;
+        }
+
+        .notebook-sidebar-header {
+            padding: 15px;
+            border-bottom: 1px solid var(--border-dim);
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .sidebar-tabs {
+            display: flex;
+            border-bottom: 1px solid var(--border-dim);
+            background: var(--bg-input);
+        }
+        .sidebar-tab {
+            flex: 1;
+            text-align: center;
+            padding: 10px 0;
+            cursor: pointer;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            border-bottom: 2px solid transparent;
+        }
+        .sidebar-tab.active {
+            color: var(--accent-green);
+            border-bottom-color: var(--accent-green);
+            background: var(--bg-card);
+        }
+
+        .sidebar-content-area {
+            flex-grow: 1;
+            overflow-y: auto;
+            position: relative;
+        }
+
+        .sidebar-pane {
+            display: none;
+            padding: 10px;
+        }
+        .sidebar-pane.active {
+            display: block;
+        }
+
+        /* File Items (Viewing) */
+        .study-file-item {
+            padding: 10px 12px;
+            margin-bottom: 8px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            border: 1px solid transparent;
+        }
+        .study-file-item:hover { background-color: var(--bg-input); }
+        .study-file-item.active {
+            background-color: rgba(5, 150, 105, 0.1);
+            border-color: rgba(5, 150, 105, 0.3);
+            color: var(--accent-green);
+        }
+
+        /* Source Items (AI Selection) */
+        .source-item {
+            padding: 10px 12px;
+            margin-bottom: 8px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            border: 1px solid var(--border-dim);
+        }
+        .source-item:hover { background: var(--bg-input); }
+        .source-item.selected {
+            background: rgba(5, 150, 105, 0.05);
+            border-color: var(--accent-green);
+        }
+        .source-checkbox {
+            width: 18px;
+            height: 18px;
+            border-radius: 4px;
+            border: 2px solid var(--border-dim);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+            flex-shrink: 0;
+        }
+        .selected .source-checkbox { background: var(--accent-green); border-color: var(--accent-green); }
+
+
+        /* --- MAIN CONTENT: VIEWER & CANVAS --- */
+        .notebook-main {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            background-color: var(--bg-input);
+            position: relative;
+            min-width: 0;
+            border-right: 1px solid var(--border-dim);
+        }
+
+        .study-toolbar {
+            height: 50px;
+            background-color: var(--bg-card);
+            border-bottom: 1px solid var(--border-dim);
+            display: flex;
+            align-items: center;
+            padding: 0 15px;
+            gap: 8px;
+            flex-shrink: 0;
+        }
+
+        .toolbar-btn {
+            background: transparent;
+            border: 1px solid var(--border-dim);
+            color: var(--text-main);
+            padding: 6px 10px;
+            border-radius: 6px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.85rem;
+            transition: all 0.2s;
+        }
+        .toolbar-btn:hover { background-color: var(--bg-input); }
+        .toolbar-btn.active { 
+            background-color: rgba(5, 150, 105, 0.1); 
+            border-color: var(--accent-green);
+            color: var(--accent-green);
+        }
+
+        .document-container {
+            flex-grow: 1;
+            position: relative;
+            overflow: auto;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+        }
+        
+        .document-wrapper {
+            position: relative;
+            background: white;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+            min-height: 800px;
+            width: 100%;
+            max-width: 900px;
+            border-radius: 8px;
+            overflow: hidden; 
+        }
+
+        .dark-theme .document-wrapper {
+            background: #e6edf3; 
+        }
+
+        #docIframe, #docImage {
+            width: 100%;
+            height: 100%;
+            min-height: 800px;
+            border: none;
+            display: block;
+        }
+
+        #drawingCanvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 10;
+            pointer-events: none; 
+        }
+        #drawingCanvas.drawing-mode { cursor: crosshair; pointer-events: auto; }
+        #drawingCanvas.text-mode { cursor: text; pointer-events: auto; }
+
+        .draggable-note {
+            position: absolute;
+            z-index: 20;
+            background: rgba(255, 248, 220, 0.95);
+            border: 1px solid #e0d080;
+            border-radius: 4px;
+            padding: 8px;
+            min-width: 150px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            color: #333; 
+            cursor: move;
+        }
+        .draggable-note textarea { width: 100%; border: none; background: transparent; resize: none; outline: none; font-family: inherit; color: inherit; }
+        .draggable-note .note-delete {
+            position: absolute; top: -8px; right: -8px; background: #ff4757; color: white; border: none; border-radius: 50%; width: 20px; height: 20px; font-size: 10px; cursor: pointer; display: none; align-items: center; justify-content: center; line-height: 1;
+        }
+        .draggable-note:hover .note-delete { display: flex; }
+
+
+        /* --- RIGHT SIDEBAR: AI CHAT & TOOLS --- */
+        .notebook-right-panel {
+            width: 380px;
+            background-color: var(--bg-card);
+            display: flex;
+            flex-direction: column;
+            flex-shrink: 0;
+            transition: all 0.3s ease;
+        }
+
+        .right-tabs {
+            display: flex;
+            border-bottom: 1px solid var(--border-dim);
+            background: var(--bg-card);
+            padding: 0 10px;
+            gap: 5px;
+            margin-top: 10px;
+        }
+        .right-tab {
+            padding: 10px 15px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            border-bottom: 2px solid transparent;
+            border-radius: 8px 8px 0 0;
+        }
+        .right-tab.active {
+            color: var(--accent-green);
+            border-bottom-color: var(--accent-green);
+            background: var(--bg-input);
+        }
+        .right-pane { display: none; flex-direction: column; height: 100%; }
+        .right-pane.active { display: flex; }
+
+        /* Tools Pane (Timer + Narration) */
+        .panel-section { padding: 20px; border-bottom: 1px solid var(--border-dim); }
+        .section-title { font-size: 0.9rem; font-weight: 600; color: var(--text-muted); margin-bottom: 15px; text-transform: uppercase; letter-spacing: 0.5px; display: flex; align-items: center; gap: 6px; }
+
+        .timer-display { font-size: 3rem; font-weight: 700; font-family: monospace; text-align: center; margin: 10px 0; color: var(--text-main); letter-spacing: -2px; }
+        .timer-controls { display: flex; gap: 10px; justify-content: center; margin-bottom: 15px; }
+        .timer-btn { width: 40px; height: 40px; border-radius: 50%; border: none; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: transform 0.1s; border: 1px solid var(--border-dim); color: var(--text-main); background: var(--bg-input); }
+        .timer-btn:active { transform: scale(0.95); }
+        .btn-play { background: var(--accent-green); color: white; border-color: var(--accent-green); }
+        .btn-pause { background: #f59e0b; color: white; border-color: #f59e0b; }
+
+        .timer-modes { display: flex; background: var(--bg-input); border-radius: 8px; padding: 4px; margin-bottom: 15px; }
+        .timer-mode-btn { flex: 1; border: none; background: transparent; color: var(--text-muted); padding: 6px 0; border-radius: 6px; font-size: 0.85rem; font-weight: 600; cursor: pointer; }
+        .timer-mode-btn.active { background: var(--bg-card); color: var(--text-main); box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+
+        .preset-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+        .preset-btn { border: 1px solid var(--border-dim); background: transparent; color: var(--text-main); padding: 8px; border-radius: 6px; font-size: 0.8rem; cursor: pointer; transition: all 0.2s; }
+        .preset-btn:hover { background: var(--bg-input); border-color: var(--accent-green); }
+
+        .ai-action-btn { width: 100%; padding: 12px; border-radius: 8px; border: none; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 10px; cursor: pointer; transition: opacity 0.2s; color: white;}
+        .ai-action-btn:hover { opacity: 0.9; }
+        .btn-read-natural { background: linear-gradient(135deg, #3b82f6, #2563eb); }
+        .btn-read-podcast { background: linear-gradient(135deg, #8b5cf6, #6d28d9); }
+
+        /* Chat Pane */
+        .notebook-chat-area { flex: 1; overflow-y: auto; padding: 20px; scroll-behavior: smooth; }
+        .notebook-input-area { padding: 15px; background: var(--bg-card); border-top: 1px solid var(--border-dim); }
+        .notebook-input-wrapper { background: var(--bg-input); border: 1px solid var(--border-dim); border-radius: 20px; padding: 6px 14px; display: flex; align-items: flex-end; gap: 10px; }
+        .notebook-input-wrapper:focus-within { border-color: var(--accent-green); }
+        #notebookInput { flex: 1; border: none; background: transparent; color: var(--text-main); padding: 8px 0; resize: none; max-height: 150px; font-size: 0.95rem; }
+        #notebookInput:focus { outline: none; }
+
+        .notebook-bubble { margin-bottom: 20px; animation: fadeIn 0.3s ease; }
+        .notebook-bubble .role-label { font-weight: 700; font-size: 0.75rem; text-transform: uppercase; margin-bottom: 6px; display: flex; align-items: center; gap: 6px; }
+        .role-ai { color: var(--accent-green); }
+        .role-user { color: var(--text-muted); }
+        .bubble-content { font-size: 0.95rem; line-height: 1.6; color: var(--text-main); }
+        
+        .action-chip { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 16px; background: var(--bg-input); border: 1px solid var(--border-dim); font-size: 0.8rem; font-weight: 500; cursor: pointer; margin: 0 4px 8px 0; color: var(--text-main); transition: all 0.2s;}
+        .action-chip:hover { background: var(--border-dim); }
+        .action-chip i { color: var(--accent-green); }
+
+        /* Audio Player container (hidden until active) */
+        #audioContainer { display: none; margin-top: 15px; }
+
+        @@media (max-width: 992px) {
+            .notebook-layout { flex-direction: column; }
+            .notebook-sidebar { width: 100%; height: 30vh; border-right: none; border-bottom: 1px solid var(--border-dim); }
+            .notebook-main { height: 40vh; }
+            .notebook-right-panel { width: 100%; height: 30vh; }
+        }
+
+        @@keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        @@keyframes eq { 0% { height: 4px; } 100% { height: 14px; } }
+    </style>
+}
+
+<div class="notebook-layout">
     
-    /* Left Sidebar: Sources */
-    .notebook-sidebar { 
-        width: 320px; 
-        border-right: 1px solid var(--border-dim); 
-        display: flex; 
-        flex-direction: column; 
-        background: var(--bg-header); 
-        transition: all 0.3s ease;
-        z-index: 1000;
-    }
-    
-    /* Main Content */
-    .notebook-main { 
-        flex: 1; 
-        display: flex; 
-        flex-direction: column; 
-        background: var(--bg-body); 
-        position: relative;
-        min-width: 0;
-    }
-
-    .notebook-header { 
-        padding: 16px 24px; 
-        border-bottom: 1px solid var(--border-dim); 
-        display: flex; 
-        align-items: center; 
-        justify-content: space-between;
-        background: var(--bg-header);
-    }
-
-    .source-item {
-        padding: 12px 16px;
-        border-bottom: 1px solid var(--border-dim);
-        cursor: pointer;
-        transition: background 0.2s;
-        display: flex;
-        align-items: center;
-        gap: 12px;
-    }
-    .source-item:hover { background: var(--bg-input); }
-    .source-item.selected { background: rgba(5, 150, 105, 0.1); border-left: 4px solid var(--accent-green); }
-    
-    .source-checkbox {
-        width: 18px;
-        height: 18px;
-        border-radius: 4px;
-        border: 2px solid var(--border-dim);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        transition: all 0.2s;
-    }
-    .selected .source-checkbox { background: var(--accent-green); border-color: var(--accent-green); }
-
-    .notebook-chat-area {
-        flex: 1;
-        overflow-y: auto;
-        padding: 40px 20px;
-        max-width: 900px;
-        margin: 0 auto;
-        width: 100%;
-        scroll-behavior: smooth;
-    }
-
-    .notebook-input-area {
-        padding: 24px;
-        background: var(--bg-body);
-        border-top: 1px solid var(--border-dim);
-    }
-
-    .notebook-input-wrapper {
-        max-width: 800px;
-        margin: 0 auto;
-        background: var(--bg-card);
-        border: 1px solid var(--border-dim);
-        border-radius: 24px;
-        padding: 8px 16px;
-        display: flex;
-        align-items: flex-end;
-        gap: 12px;
-        box-shadow: 0 4px 20px rgba(0,0,0,0.05);
-    }
-
-    .notebook-input-wrapper:focus-within {
-        border-color: var(--accent-green);
-        box-shadow: 0 4px 24px rgba(5, 150, 105, 0.1);
-    }
-
-    #notebookInput {
-        flex: 1;
-        border: none;
-        background: transparent;
-        color: var(--text-main);
-        padding: 12px 0;
-        resize: none;
-        max-height: 200px;
-        font-size: 1.05rem;
-    }
-    #notebookInput:focus { outline: none; }
-
-    .action-button {
-        background: var(--bg-input);
-        border: 1px solid var(--border-dim);
-        padding: 8px 16px;
-        border-radius: 12px;
-        font-size: 0.9rem;
-        font-weight: 500;
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        transition: all 0.2s;
-        color: var(--text-main);
-    }
-    .action-button:hover { background: var(--border-dim); transform: translateY(-1px); }
-    .action-button i { color: var(--accent-green); }
-
-    .notebook-bubble {
-        margin-bottom: 32px;
-        animation: fadeIn 0.3s ease;
-    }
-    .notebook-bubble .role-label {
-        font-weight: 700;
-        font-size: 0.8rem;
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
-        margin-bottom: 8px;
-        display: flex;
-        align-items: center;
-        gap: 6px;
-    }
-    .role-ai { color: var(--accent-green); }
-    .role-user { color: var(--text-muted); }
-
-    .bubble-content { font-size: 1.1rem; line-height: 1.7; color: var(--text-main); }
-    .bubble-content p { margin-bottom: 1.2rem; }
-    
-    /* Markdown Styles */
-    .bubble-content h1, .bubble-content h2, .bubble-content h3 { margin-top: 2rem; margin-bottom: 1rem; font-weight: 700; }
-    .bubble-content table { width: 100%; border-collapse: collapse; margin: 20px 0; border: 1px solid var(--border-dim); border-radius: 12px; overflow: hidden; }
-    .bubble-content th { background: var(--bg-card); padding: 12px; text-align: left; border-bottom: 2px solid var(--border-dim); }
-    .bubble-content td { padding: 12px; border-bottom: 1px solid var(--border-dim); }
-    .bubble-content blockquote { border-left: 4px solid var(--accent-green); padding: 10px 20px; background: var(--bg-input); border-radius: 0 12px 12px 0; margin: 20px 0; }
-
-    /* Mobile Responsive */
-    @media (max-width: 991px) {
-        .notebook-sidebar { position: fixed; left: -100%; top: 0; bottom: 0; }
-        .notebook-sidebar.open { left: 0; }
-        .sidebar-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 999; }
-        .sidebar-overlay.show { display: block; }
-    }
-
-    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-
-    /* Audio Overview Special Card */
-    .audio-block {
-        background: linear-gradient(135deg, #059669, #10b981);
-        color: white;
-        padding: 24px;
-        border-radius: 20px;
-        margin: 20px 0;
-        display: flex;
-        align-items: center;
-        gap: 20px;
-        box-shadow: 0 10px 30px rgba(5, 150, 105, 0.3);
-    }
-    .audio-icon { width: 50px; height: 50px; background: rgba(255,255,255,0.2); border-radius: 50%; display: flex; align-items: center; justify-content: center; }
-</style>
-
-<div class="notebook-container">
-    <div class="sidebar-overlay" id="sidebarOverlay"></div>
-    
-    <!-- Sidebar: Sources -->
-    <aside class="notebook-sidebar" id="notebookSidebar">
-        <div class="p-4 border-bottom d-flex align-items-center justify-content-between">
-            <h5 class="mb-0 fw-bold"><i data-lucide="library" class="me-2 text-success"></i> Kaynaklar</h5>
-            <button class="btn btn-sm d-lg-none" onclick="toggleSidebar()"><i data-lucide="x"></i></button>
+    <!-- LEFT PANEL: TABS FOR VIEWER AND AI SOURCES -->
+    <div class="notebook-sidebar">
+        <div class="notebook-sidebar-header">
+            <span class="fs-5 d-flex align-items-center gap-2"><i data-lucide="book-open" class="text-success"></i> Akıllı Defter</span>
         </div>
-        <div class="flex-grow-1 overflow-auto" id="sourceList">
-            @if (!allFiles.Any())
-            {
-                <div class="p-4 text-center text-muted">
-                    <i data-lucide="file-warning" size="32" class="mb-2"></i>
-                    <p class="small">Henüz dosya yüklenmemiş. Lütfen önce "Belgeler" kısmından dosya ekleyin.</p>
-                </div>
-            }
-            @foreach (var file in allFiles)
-            {
-                <div class="source-item" data-id="@file.Id" onclick="toggleSource('@file.Id')">
-                    <div class="source-checkbox">
-                        <i data-lucide="check" size="12" class="text-white d-none"></i>
-                    </div>
-                    <div class="flex-grow-1 min-width-0">
-                        <div class="fw-medium text-truncate" style="font-size: 0.9rem;">@file.FileName</div>
-                        <div class="text-muted" style="font-size: 0.75rem;">@file.Type | @file.UploadDate.ToString("dd.MM.yyyy")</div>
-                    </div>
-                </div>
-            }
+        <div class="sidebar-tabs">
+            <div class="sidebar-tab active" onclick="switchSidebarTab('viewer')">Görüntüle</div>
+            <div class="sidebar-tab" onclick="switchSidebarTab('sources')">AI Kaynakları</div>
         </div>
-        <div class="p-3 border-top bg-light">
-            <button class="btn btn-success w-100 fw-bold d-flex align-items-center justify-content-center gap-2" onclick="window.location.href='/Dashboard/Files'" style="border-radius: 12px;">
-                <i data-lucide="upload" size="18"></i> Yeni Kaynak Ekle
+        
+        <div class="sidebar-content-area">
+            <!-- Viewer Tab -->
+            <div class="sidebar-pane active" id="tab-viewer">
+                <p class="small text-muted mb-2 px-1">Ortadaki ekranda açmak için bir dosya seçin.</p>
+                @if (!recentFiles.Any())
+                {
+                    <div class="text-center text-muted p-3"><i data-lucide="file-question" class="mb-2 opacity-50"></i><br>Dosya bulunamadı.</div>
+                }
+                @foreach(var file in recentFiles)
+                {
+                    <div class="study-file-item" data-id="@file.Id" data-url="@file.FilePath" data-type="@file.Type">
+                        @if(file.Type == DarkNetCore.Models.ResourceType.Document) { <i data-lucide="file-text"></i> } 
+                        else if(file.Type == DarkNetCore.Models.ResourceType.Image) { <i data-lucide="image"></i> } 
+                        else { <i data-lucide="file"></i> }
+                        <div class="text-truncate min-width-0">
+                            <div style="font-size: 0.9rem; font-weight: 500;" class="text-truncate">@file.FileName</div>
+                            <div style="font-size: 0.75rem; color: var(--text-muted);">@(file.UploadDate.ToString("dd MMM yyyy"))</div>
+                        </div>
+                    </div>
+                }
+            </div>
+            
+            <!-- AI Sources Tab -->
+            <div class="sidebar-pane" id="tab-sources">
+                <p class="small text-muted mb-2 px-1">Yapay zekanın cevap verirken kullanmasını istediğiniz kaynakları işaretleyin.</p>
+                @if (!allFiles.Any())
+                {
+                    <div class="text-center text-muted p-3"><i data-lucide="file-warning" class="mb-2 opacity-50"></i><br>Belge yok.</div>
+                }
+                @foreach (var file in allFiles)
+                {
+                    <div class="source-item" data-id="@file.Id" onclick="toggleSource('@file.Id')">
+                        <div class="source-checkbox"><i data-lucide="check" size="12" class="text-white d-none"></i></div>
+                        <div class="text-truncate min-width-0">
+                            <div class="fw-medium text-truncate" style="font-size: 0.9rem;">@file.FileName</div>
+                            <div class="text-muted" style="font-size: 0.75rem;">@file.Type</div>
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+        
+        <div class="p-3 border-top bg-light dark-theme-bg-input">
+            <button class="btn btn-outline-success w-100 fw-bold d-flex align-items-center justify-content-center gap-2" onclick="window.location.href='/Dashboard/Files'">
+                <i data-lucide="upload" size="16"></i> Yeni Belge Yükle
             </button>
         </div>
-    </aside>
+    </div>
 
-    <!-- Main Section -->
-    <main class="notebook-main">
-        <header class="notebook-header">
-            <div class="d-flex align-items-center gap-3">
-                <button class="btn btn-sm btn-outline-secondary d-lg-none" onclick="toggleSidebar()">
-                    <i data-lucide="menu"></i>
-                </i i>
-                <h5 class="mb-0 fw-bold text-dark">Dopamind Akıllı Defter</h5>
+    <!-- MAIN PANEL: VIEWER & CANVAS -->
+    <div class="notebook-main">
+        <div class="study-toolbar">
+            <button class="toolbar-btn active" id="btnCursor" title="İmleç / Oku"><i data-lucide="mouse-pointer-2" size="16"></i></button>
+            <div style="width: 1px; height: 20px; background: var(--border-dim); margin: 0 5px;"></div>
+            <button class="toolbar-btn" id="btnPen" title="Siyah Kalem"><i data-lucide="pen-tool" size="16"></i></button>
+            <button class="toolbar-btn" id="btnHighlight" title="Fosforlu Kalem"><i data-lucide="highlighter" size="16"></i></button>
+            <button class="toolbar-btn" id="btnEraser" title="Silgi"><i data-lucide="eraser" size="16"></i></button>
+            <button class="toolbar-btn" id="btnText" title="Not Ekle (Sürükle-Bırak)"><i data-lucide="type" size="16"></i></button>
+            
+            <div class="ms-auto d-flex gap-2">
+                <button class="toolbar-btn text-danger d-none" id="btnClearCanvas" title="Çizimleri Temizle"><i data-lucide="trash-2" size="16"></i></button>
+                <button class="toolbar-btn text-success" id="btnSaveCanvas" title="Çizimi PDF'e Kaydet"><i data-lucide="save" size="16"></i> <span class="d-none d-sm-inline">Kaydet</span></button>
             </div>
-            <div class="d-flex gap-2" id="notebookActions">
-                <button class="action-button" onclick="generateMode('audio_overview')">
-                    <i data-lucide="radio"></i> <span class="d-none d-sm-inline">Podcast</span>
-                </button>
-                <button class="action-button" onclick="generateMode('study_guide')">
-                    <i data-lucide="book-open"></i> <span class="d-none d-sm-inline">Rehber</span>
-                </button>
-                <button class="action-button" onclick="generateMode('flashcards')">
-                    <i data-lucide="layers"></i> <span class="d-none d-sm-inline">Kartlar</span>
-                </button>
-            </div>
-        </header>
+        </div>
 
-        <div class="notebook-chat-area" id="notebookChatArea">
-            <div id="notebookWelcome" class="text-center py-5">
-                <div class="display-1 mb-4" style="opacity: 0.1;"><i data-lucide="brain-circuit" size="80"></i></div>
-                <h2 class="fw-bold mb-3">Çalışmaya Başlayalım</h2>
-                <p class="text-muted mx-auto" style="max-width: 500px;">
-                    Sol taraftan çalışma kaynaklarınızı (PDF, Notlar vb.) seçin. AI bu kaynakları analiz edecek ve sadece onlara dayanarak size cevap verecek.
-                </p>
-                <div class="d-flex justify-content-center gap-2 mt-4">
-                    <span class="badge bg-light text-dark border p-2"><i data-lucide="check-circle" class="text-success me-1"></i> Kaynak Odaklı</span>
-                    <span class="badge bg-light text-dark border p-2"><i data-lucide="check-circle" class="text-success me-1"></i> Derin Analiz</span>
+        <div class="document-container" id="documentContainer">
+            <div class="document-wrapper" id="documentWrapper">
+                <div id="noFileMsg" class="d-flex w-100 h-100 align-items-center justify-content-center flex-column text-muted" style="min-height: 500px;">
+                    <i data-lucide="file-search" size="48" class="mb-3 opacity-50"></i>
+                    <p>Çalışmak için sol taraftan "Görüntüle" sekmesinden bir belge seçin.</p>
+                </div>
+                <div id="unsupportedPromptMsg" class="d-none w-100 h-100 align-items-center justify-content-center flex-column text-muted text-center p-4" style="min-height: 500px;">
+                    <i data-lucide="file-warning" size="48" class="mb-3 opacity-50 text-warning"></i>
+                    <h5 class="fw-bold">Görüntüleme Desteklenmiyor</h5>
+                    <p class="small">Bu dosya formatı tarayıcıda doğrudan açılamıyor. Ancak yapay zeka tarafından okunup özetlenebilir.</p>
+                    <p class="small">Dosya üzerinden soru sormak için "AI Kaynakları"ndan dosyayı seçip sağ panelden sohbet edebilirsiniz.</p>
+                </div>
+                <iframe id="docIframe" class="d-none" src=""></iframe>
+                <img id="docImage" class="d-none" src="" style="object-fit: contain;" />
+                
+                <canvas id="drawingCanvas"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- RIGHT PANEL: TABS FOR AI CHAT & TOOLS -->
+    <div class="notebook-right-panel">
+        <div class="right-tabs">
+            <div class="right-tab active" onclick="switchRightTab('chat')"><i data-lucide="sparkles" size="16" class="me-1"></i> AI Notebook</div>
+            <div class="right-tab" onclick="switchRightTab('tools')"><i data-lucide="wrench" size="16" class="me-1"></i> Araçlar</div>
+        </div>
+
+        <!-- Chat Pane -->
+        <div class="right-pane active" id="rtab-chat">
+            <div class="p-3 border-bottom text-center bg-light dark-theme-bg-body">
+                <div class="d-flex flex-wrap justify-content-center">
+                    <button class="action-chip" onclick="generateMode('audio_overview')"><i data-lucide="radio" size="14"></i> Podcast Üret</button>
+                    <button class="action-chip" onclick="generateMode('study_guide')"><i data-lucide="book-open" size="14"></i> Rehber Çıkar</button>
+                    <button class="action-chip" onclick="generateMode('flashcards')"><i data-lucide="layers" size="14"></i> Soru Kartları</button>
                 </div>
             </div>
-            <!-- Messages will appear here -->
+            
+            <div class="notebook-chat-area" id="notebookChatArea">
+                <div id="notebookWelcome" class="text-center py-4">
+                    <i data-lucide="brain-circuit" size="40" class="mb-3 opacity-25"></i>
+                    <h6 class="fw-bold">AI ile Dosyaları Konuş</h6>
+                    <p class="small text-muted mb-0">Sol menüde "AI Kaynakları" sekmesinden dosya seçerek, yalnızca o dosyalara dayalı sorular sorabilirsiniz.</p>
+                </div>
+            </div>
+
+            <div class="notebook-input-area">
+                <div class="text-center mb-2">
+                    <small class="text-muted" id="selectedCountInfo" style="font-size: 0.75rem;">0 kaynak seçildi.</small>
+                </div>
+                <div class="notebook-input-wrapper">
+                    <textarea id="notebookInput" rows="1" placeholder="Seçili kaynaklara sor..." oninput="autoExpand(this)"></textarea>
+                    <button class="btn btn-success rounded-circle shadow-sm d-flex align-items-center justify-content-center p-0" id="sendBtn" style="width: 36px; height: 36px;" onclick="sendNotebookMessage()">
+                        <i data-lucide="arrow-up" size="18"></i>
+                    </button>
+                </div>
+            </div>
         </div>
 
-        <div class="notebook-input-area">
-            <div class="notebook-input-wrapper">
-                <textarea id="notebookInput" rows="1" placeholder="Seçili kaynaklar hakkında bir soru sor..." oninput="autoExpand(this)"></textarea>
-                <button class="btn btn-success rounded-circle shadow-sm mb-1 d-flex align-items-center justify-content-center" id="sendBtn" style="width: 44px; height: 44px;" onclick="sendNotebookMessage()">
-                    <i data-lucide="arrow-up" size="24"></i>
-                </button>
+        <!-- Tools Pane (Timer & Narration) -->
+        <div class="right-pane" id="rtab-tools" style="overflow-y: auto;">
+            <!-- Timer Section -->
+            <div class="panel-section">
+                <div class="section-title"><i data-lucide="timer" size="16"></i> Odak Zamanlayıcı</div>
+                
+                <div class="timer-modes">
+                    <button class="timer-mode-btn active" data-mode="countdown">Geri Sayım</button>
+                    <button class="timer-mode-btn" data-mode="stopwatch">Kronometre</button>
+                </div>
+
+                <div class="timer-display" id="timerDisplay">25:00</div>
+
+                <div class="timer-controls">
+                    <button class="timer-btn btn-play" id="btnTimerPlay"><i data-lucide="play" size="20"></i></button>
+                    <button class="timer-btn btn-pause d-none" id="btnTimerPause"><i data-lucide="pause" size="20"></i></button>
+                    <button class="timer-btn btn-reset" id="btnTimerReset"><i data-lucide="rotate-ccw" size="18"></i></button>
+                </div>
+
+                <div id="countdownPresets">
+                    <div class="preset-grid">
+                        <button class="preset-btn" onclick="setTimer(25)">🍅 Pomodoro</button>
+                        <button class="preset-btn" onclick="setTimer(50)">🧠 Deep Work</button>
+                        <button class="preset-btn" onclick="setTimer(5)">☕ Kısa Mola</button>
+                        <button class="preset-btn" onclick="setTimer(15)">🚶 Uzun Mola</button>
+                    </div>
+                </div>
             </div>
-            <div class="text-center mt-2">
-                <small class="text-muted" id="selectedCountInfo">Henüz kaynak seçilmedi.</small>
+
+            <!-- Narration Section -->
+            <div class="panel-section flex-grow-1 border-bottom-0">
+                <div class="section-title"><i data-lucide="mic" size="16"></i> AI Sesli Anlatım</div>
+                <p class="text-muted" style="font-size: 0.8rem; margin-bottom: 15px;">
+                    Ekranda açık olan belgeyi AI ile tamamen doğal bir dille okutun.
+                </p>
+
+                <button class="ai-action-btn btn-read-natural" id="btnReadNatural">
+                    <i data-lucide="book-open-check"></i> Doğal Oku
+                </button>
+                <div class="text-center my-2 text-muted small">veya tartışmalı dinle</div>
+                <button class="ai-action-btn btn-read-podcast" id="btnReadPodcast">
+                    <i data-lucide="headphones"></i> Belgeden Podcast Üret
+                </button>
+
+                <div class="text-center mt-3 small font-italic" id="aiStatusMsg" style="color: var(--text-muted); display: none;">Oluşturuluyor...</div>
+
+                <div id="audioContainer" class="p-3 mt-3 rounded shadow-sm" style="background: var(--bg-input);">
+                    <div class="d-flex align-items-center justify-content-between mb-2">
+                        <span class="fw-bold" style="font-size:0.85rem;" id="playerLabel">Playing...</span>
+                        <div class="d-flex gap-1 align-items-end" style="height:15px;" id="audioVisualizer">
+                            <div style="width:3px;height:6px;background:var(--accent-green);animation: eq 0.5s infinite alternate;"></div>
+                            <div style="width:3px;height:14px;background:var(--accent-green);animation: eq 0.6s infinite alternate-reverse;"></div>
+                            <div style="width:3px;height:8px;background:var(--accent-green);animation: eq 0.4s infinite alternate;"></div>
+                        </div>
+                    </div>
+                    <div class="progress" style="height: 6px;">
+                        <div class="progress-bar progress-bar-striped progress-bar-animated bg-success" role="progressbar" style="width: 100%"></div>
+                    </div>
+                    <div class="d-flex justify-content-center mt-3">
+                        <button class="btn btn-sm btn-outline-danger" id="btnStopAudio">Durdur</button>
+                    </div>
+                </div>
             </div>
         </div>
-    </main>
+    </div>
 </div>
 
 @section Scripts {
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <script>
-        let selectedSourceIds = [];
+        // --- TABS LOGIC ---
+        function switchSidebarTab(tab) {
+            document.querySelectorAll('.sidebar-tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.sidebar-pane').forEach(p => p.classList.remove('active'));
+            event.target.classList.add('active');
+            document.getElementById('tab-' + tab).classList.add('active');
+        }
 
+        function switchRightTab(tab) {
+            document.querySelectorAll('.right-tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.right-pane').forEach(p => p.classList.remove('active'));
+            event.target.classList.add('active');
+            document.getElementById('rtab-' + tab).classList.add('active');
+        }
+
+        // --- VIEWER LOGIC ---
+        let currentFileId = null;
+        document.querySelectorAll('.study-file-item').forEach(item => {
+            item.addEventListener('click', function() {
+                document.querySelectorAll('.study-file-item').forEach(i => i.classList.remove('active'));
+                this.classList.add('active');
+                
+                currentFileId = this.dataset.id;
+                const url = this.dataset.url;
+                const type = this.dataset.type;
+
+                document.getElementById('noFileMsg').classList.add('d-none');
+                
+                const iframe = document.getElementById('docIframe');
+                const image = document.getElementById('docImage');
+                const unsupportedPrompt = document.getElementById('unsupportedPromptMsg');
+                
+                iframe.classList.add('d-none');
+                image.classList.add('d-none');
+                unsupportedPrompt.classList.add('d-none');
+
+                if (type === 'Image') {
+                    image.classList.remove('d-none');
+                    image.src = url;
+                } else if (url.toLowerCase().endsWith('.pdf') || url.toLowerCase().endsWith('.txt') || url.toLowerCase().endsWith('.csv') || url.toLowerCase().endsWith('.md')) {
+                    iframe.classList.remove('d-none');
+                    iframe.src = url;
+                } else {
+                    unsupportedPrompt.classList.remove('d-none');
+                    unsupportedPrompt.classList.add('d-flex');
+                }
+
+                // Reset canvas for new file
+                clearCanvas();
+                document.querySelectorAll('.draggable-note').forEach(n => n.remove());
+            });
+        });
+
+        // --- CANAVAS AND DRAWING ---
+        const canvas = document.getElementById('drawingCanvas');
+        const ctx = canvas.getContext('2d');
+        const wrapper = document.getElementById('documentWrapper');
+        let drawing = false;
+        let currentTool = 'cursor';
+        
+        const resizeCanvas = () => {
+            canvas.width = wrapper.offsetWidth;
+            canvas.height = wrapper.offsetHeight;
+        };
+        new ResizeObserver(resizeCanvas).observe(wrapper);
+
+        const toolBtns = {
+            'cursor': document.getElementById('btnCursor'),
+            'pen': document.getElementById('btnPen'),
+            'highlight': document.getElementById('btnHighlight'),
+            'eraser': document.getElementById('btnEraser'),
+            'text': document.getElementById('btnText')
+        };
+
+        function setTool(tool) {
+            currentTool = tool;
+            Object.values(toolBtns).forEach(btn => btn.classList.remove('active'));
+            if(toolBtns[tool]) toolBtns[tool].classList.add('active');
+
+            if (tool === 'cursor') canvas.className = '';
+            else if (tool === 'text') canvas.className = 'text-mode';
+            else {
+                canvas.className = 'drawing-mode';
+                document.getElementById('btnClearCanvas').classList.remove('d-none');
+            }
+        }
+        Object.keys(toolBtns).forEach(tool => {
+            toolBtns[tool].addEventListener('click', () => setTool(tool));
+        });
+
+        function getPos(e) {
+            const rect = canvas.getBoundingClientRect();
+            return { x: e.clientX - rect.left, y: e.clientY - rect.top };
+        }
+
+        canvas.addEventListener('mousedown', (e) => {
+            if (currentTool === 'cursor') return;
+            const pos = getPos(e);
+            if (currentTool === 'text') {
+                createDraggableNote(pos.x, pos.y);
+                setTool('cursor'); 
+                return;
+            }
+            drawing = true;
+            ctx.beginPath();
+            ctx.moveTo(pos.x, pos.y);
+        });
+
+        canvas.addEventListener('mousemove', (e) => {
+            if (!drawing || currentTool === 'cursor' || currentTool === 'text') return;
+            const pos = getPos(e);
+            ctx.lineTo(pos.x, pos.y);
+            
+            if (currentTool === 'pen') { ctx.strokeStyle = '#000000'; ctx.lineWidth = 2; ctx.globalCompositeOperation = "source-over"; }
+            else if (currentTool === 'highlight') { ctx.strokeStyle = 'rgba(255, 255, 0, 0.4)'; ctx.lineWidth = 20; ctx.globalCompositeOperation = "multiply"; }
+            else if (currentTool === 'eraser') { ctx.strokeStyle = 'rgba(0,0,0,1)'; ctx.lineWidth = 30; ctx.globalCompositeOperation = "destination-out"; }
+            
+            ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.stroke();
+        });
+
+        canvas.addEventListener('mouseup', () => { drawing = false; });
+        canvas.addEventListener('mouseleave', () => { drawing = false; });
+
+        document.getElementById('btnClearCanvas').addEventListener('click', clearCanvas);
+        function clearCanvas() { ctx.clearRect(0, 0, canvas.width, canvas.height); }
+
+        function createDraggableNote(x, y) {
+            const noteArea = document.createElement('div');
+            noteArea.className = 'draggable-note';
+            noteArea.style.left = x + 'px'; noteArea.style.top = y + 'px';
+
+            const delBtn = document.createElement('button');
+            delBtn.className = 'note-delete';
+            delBtn.innerHTML = '<i data-lucide="x" size="12"></i>';
+            delBtn.onclick = () => noteArea.remove();
+
+            const textarea = document.createElement('textarea');
+            textarea.rows = 3; textarea.placeholder = "Not yazın...";
+            
+            noteArea.appendChild(delBtn); noteArea.appendChild(textarea);
+            document.getElementById('documentWrapper').appendChild(noteArea);
+            lucide.createIcons();
+
+            let isDragging = false, startX, startY;
+            noteArea.addEventListener('mousedown', function(e) {
+                if(e.target === textarea) return;
+                isDragging = true;
+                startX = e.clientX - noteArea.offsetLeft;
+                startY = e.clientY - noteArea.offsetTop;
+            });
+            document.addEventListener('mousemove', function(e) {
+                if(!isDragging) return;
+                noteArea.style.left = (e.clientX - startX) + 'px';
+                noteArea.style.top = (e.clientY - startY) + 'px';
+            });
+            document.addEventListener('mouseup', function() { isDragging = false; });
+        }
+
+        document.getElementById('btnSaveCanvas').addEventListener('click', async () => {
+            if (!currentFileId) { window.showToast("Lütfen bir dosya açın", "error"); return; }
+            window.getSelection().removeAllRanges();
+            document.querySelectorAll('.draggable-note textarea').forEach(ta => ta.blur());
+
+            const saveBtn = document.getElementById('btnSaveCanvas');
+            const originalHtml = saveBtn.innerHTML;
+            saveBtn.innerHTML = '<i data-lucide="loader" class="fa-spin" size="16"></i> Dışa Aktarılıyor...';
+            saveBtn.disabled = true;
+
+            try {
+                const docWrapper = document.getElementById('documentContainer');
+                const canvasRender = await html2canvas(docWrapper, { scale: 2, useCORS: true, allowTaint: true, backgroundColor: "#ffffff" });
+
+                canvasRender.toBlob(async (blob) => {
+                    const formData = new FormData();
+                    formData.append('fileId', currentFileId);
+                    formData.append('canvasImage', blob, 'exported_canvas.png');
+
+                    const res = await fetch('/Dashboard/SaveStudyCanvas', { method: 'POST', body: formData });
+                    const data = await res.json();
+                    if(data.success) {
+                        window.showToast("Canvas dışa aktarıldı ve dosyalara eklendi!");
+                    } else {
+                        window.showToast(data.message || "Kaydetme başarısız.", "error");
+                    }
+                    saveBtn.innerHTML = originalHtml;
+                    saveBtn.disabled = false;
+                    lucide.createIcons();
+                }, 'image/png');
+            } catch (error) {
+                console.error(error);
+                window.showToast("Görsel yakalanamadı.", "error");
+                saveBtn.innerHTML = originalHtml; saveBtn.disabled = false; lucide.createIcons();
+            }
+        });
+
+        // --- TIMER LOGIC ---
+        let timerInterval; let timeLeft = 25 * 60; let isStopwatch = false;
+        const display = document.getElementById('timerDisplay');
+        const btnPlay = document.getElementById('btnTimerPlay');
+        const btnPause = document.getElementById('btnTimerPause');
+        
+        function updateTimerDisplay() {
+            const m = Math.floor(timeLeft / 60).toString().padStart(2, '0');
+            const s = (timeLeft % 60).toString().padStart(2, '0');
+            display.innerText = `${m}:${s}`;
+        }
+        document.querySelectorAll('.timer-mode-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                document.querySelectorAll('.timer-mode-btn').forEach(b => b.classList.remove('active'));
+                e.target.classList.add('active');
+                isStopwatch = e.target.dataset.mode === 'stopwatch';
+                clearInterval(timerInterval);
+                btnPause.classList.add('d-none'); btnPlay.classList.remove('d-none');
+                document.getElementById('countdownPresets').style.display = isStopwatch ? 'none' : 'block';
+                timeLeft = isStopwatch ? 0 : 25 * 60;
+                updateTimerDisplay();
+            });
+        });
+        window.setTimer = function(minutes) {
+            clearInterval(timerInterval); timeLeft = minutes * 60; updateTimerDisplay();
+            btnPause.classList.add('d-none'); btnPlay.classList.remove('d-none');
+        };
+        btnPlay.addEventListener('click', () => {
+            btnPlay.classList.add('d-none'); btnPause.classList.remove('d-none');
+            timerInterval = setInterval(() => {
+                if (isStopwatch) timeLeft++;
+                else {
+                    if (timeLeft > 0) timeLeft--;
+                    else { clearInterval(timerInterval); window.showToast("⏳ Süre doldu!"); }
+                }
+                updateTimerDisplay();
+            }, 1000);
+        });
+        btnPause.addEventListener('click', () => { clearInterval(timerInterval); btnPause.classList.add('d-none'); btnPlay.classList.remove('d-none'); });
+        document.getElementById('btnTimerReset').addEventListener('click', () => { clearInterval(timerInterval); btnPause.classList.add('d-none'); btnPlay.classList.remove('d-none'); timeLeft = isStopwatch ? 0 : 25 * 60; updateTimerDisplay(); });
+
+
+        // --- NARRATION LOGIC ---
+        function attachNarrationEvents() {
+            document.getElementById('btnReadNatural')?.addEventListener('click', () => requestNarration('natural'));
+            document.getElementById('btnReadPodcast')?.addEventListener('click', () => requestNarration('podcast'));
+            document.getElementById('btnStopAudio')?.addEventListener('click', () => {
+                window.speechSynthesis.cancel();
+                document.getElementById('audioContainer').style.display = 'none';
+                document.getElementById('aiStatusMsg').style.display = 'none';
+            });
+        }
+        
+        async function requestNarration(mode) {
+            if (!currentFileId) {
+                window.showToast("Lütfen soldan 'Görüntüle' sekmesinden bir dosya açın.", "error");
+                return;
+            }
+            const statusMsg = document.getElementById('aiStatusMsg');
+            statusMsg.style.display = 'block';
+            statusMsg.innerText = mode === 'podcast' ? 'Diyaloglar oluşturuluyor...' : 'Metin hazırlanıyor...';
+
+            try {
+                const res = await fetch('/Dashboard/GenerateStudyNarration', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ fileId: currentFileId, mode: mode })
+                });
+                const data = await res.json();
+                
+                if (data.success && data.script) {
+                    statusMsg.innerText = 'Okunuyor...';
+                    playSpeech(data.script);
+                } else {
+                    statusMsg.style.display = 'none';
+                    window.showToast(data.message || "AI okuma metni üretemedi.", "error");
+                }
+            } catch (err) {
+                statusMsg.style.display = 'none';
+                window.showToast("Sunucu ile iletişim kurulamadı.", "error");
+            }
+        }
+
+        function playSpeech(text) {
+            if (!('speechSynthesis' in window)) { window.showToast("Tarayıcınız ses sentezini desteklemiyor.", "error"); return; }
+            window.speechSynthesis.cancel(); 
+            
+            document.getElementById('audioContainer').style.display = 'block';
+            
+            const sentences = text.match(/[^.!?]+[.!?]+/g) || [text];
+            let currentUtteranceIndex = 0;
+
+            const readChunk = (index) => {
+                if (index >= sentences.length) {
+                     document.getElementById('audioContainer').style.display = 'none';
+                     document.getElementById('aiStatusMsg').style.display = 'none';
+                     return;
+                }
+                const utterance = new SpeechSynthesisUtterance(sentences[index].trim());
+                utterance.lang = 'tr-TR';
+                utterance.rate = 1.0;
+                
+                utterance.onend = () => readChunk(index + 1);
+                utterance.onerror = (e) => {
+                    console.error("Speech error", e);
+                    // attempt to continue
+                    readChunk(index + 1);
+                };
+                window.speechSynthesis.speak(utterance);
+            };
+
+            readChunk(0);
+        }
+        attachNarrationEvents();
+
+        // --- AI NOTEBOOK CHAT LOGIC ---
+        let selectedSourceIds = [];
         function toggleSource(id) {
             const index = selectedSourceIds.indexOf(id);
             const item = document.querySelector(`.source-item[data-id="${id}"]`);
@@ -280,21 +849,7 @@
                 item.classList.add('selected');
                 item.querySelector('.source-checkbox i').classList.remove('d-none');
             }
-            updateSourceCount();
-        }
-
-        function updateSourceCount() {
-            const info = document.getElementById('selectedCountInfo');
-            if (selectedSourceIds.length === 0) {
-                info.textContent = "Henüz kaynak seçilmedi.";
-            } else {
-                info.textContent = `${selectedSourceIds.length} kaynak seçildi. AI sadece bu dosyalara bakacak.`;
-            }
-        }
-
-        function toggleSidebar() {
-            document.getElementById('notebookSidebar').classList.toggle('open');
-            document.getElementById('sidebarOverlay').classList.toggle('show');
+            document.getElementById('selectedCountInfo').textContent = `${selectedSourceIds.length} kaynak seçildi.`;
         }
 
         function autoExpand(textarea) {
@@ -306,45 +861,26 @@
             const input = document.getElementById('notebookInput');
             const message = input.value.trim();
             if (!message) return;
-            if (selectedSourceIds.length === 0) {
-                window.showToast("Lütfen önce en az bir kaynak seçin.", "error");
-                return;
-            }
+            if (selectedSourceIds.length === 0) { window.showToast("Önce AI Kaynaklarından dosya seçin.", "error"); return; }
 
-            // Remove welcome if first message
             document.getElementById('notebookWelcome')?.remove();
-
             appendMessage('user', message);
-            input.value = '';
-            input.style.height = 'auto';
-
+            input.value = ''; input.style.height = 'auto';
             await callNotebookAi(message, 'chat');
         }
 
         async function generateMode(mode) {
-            if (selectedSourceIds.length === 0) {
-                window.showToast("Lütfen önce en az bir kaynak seçin.", "error");
-                return;
-            }
+            if (selectedSourceIds.length === 0) { window.showToast("Lütfen önce AI Kaynaklarından belge seçin.", "error"); return; }
             document.getElementById('notebookWelcome')?.remove();
-            
-            let label = mode === 'audio_overview' ? 'Audio Overview (Podcast) oluşturuluyor...' : 
-                        mode === 'study_guide' ? 'Çalışma Rehberi hazırlanıyor...' : 'Soru-Cevap kartları üretiliyor...';
-            
+            let label = mode === 'audio_overview' ? 'Audio Overview oluşturuluyor...' : 
+                        mode === 'study_guide' ? 'Rehber hazırlanıyor...' : 'Kartlar üretiliyor...';
             appendMessage('ai', `<div class="d-flex align-items-center gap-2"><div class="spinner-border spinner-border-sm"></div> ${label}</div>`);
             await callNotebookAi('', mode);
         }
 
         async function callNotebookAi(message, mode) {
             const chatArea = document.getElementById('notebookChatArea');
-            let typingBubble = null;
-            if (mode === 'chat') {
-                typingBubble = appendMessage('ai', '...');
-            } else {
-                // If it's a special mode, we already appended a loading state in generateMode, 
-                // let's find the last AI bubble
-                typingBubble = chatArea.lastElementChild;
-            }
+            let typingBubble = mode === 'chat' ? appendMessage('ai', '...') : chatArea.lastElementChild;
 
             try {
                 const res = await fetch('/Dashboard/GenerateNotebookResponse', {
@@ -353,29 +889,15 @@
                     body: JSON.stringify({ message, sourceIds: selectedSourceIds, mode })
                 });
                 const data = await res.json();
-                
                 if (data.success) {
                     const contentDiv = typingBubble.querySelector('.bubble-content');
                     contentDiv.innerHTML = marked.parse(data.response);
-                    
-                    // Special styling for podcast script
-                    if (mode === 'audio_overview') {
-                        contentDiv.innerHTML = `<div class="audio-block">
-                            <div class="audio-icon"><i data-lucide="radio"></i></div>
-                            <div>
-                                <h5 class="mb-0 fw-bold">Sesli Özet Hazır!</h5>
-                                <p class="small mb-0 opacity-75">Selin ve Can bu konuyu senin için tartıştı.</p>
-                            </div>
-                        </div>` + contentDiv.innerHTML;
-                        lucide.createIcons();
-                    }
                 } else {
                     typingBubble.querySelector('.bubble-content').textContent = data.message;
                 }
             } catch (e) {
                 typingBubble.querySelector('.bubble-content').textContent = "Bir hata oluştu.";
             }
-            
             chatArea.scrollTop = chatArea.scrollHeight;
         }
 
@@ -383,26 +905,20 @@
             const chatArea = document.getElementById('notebookChatArea');
             const div = document.createElement('div');
             div.className = 'notebook-bubble';
-            
             const icon = role === 'ai' ? 'sparkles' : 'user';
             const label = role === 'ai' ? 'Akıllı Defter' : 'Sen';
             
             div.innerHTML = `
-                <div class="role-label role-${role}">
-                    <i data-lucide="${icon}" size="14"></i> ${label}
-                </div>
+                <div class="role-label role-${role}"><i data-lucide="${icon}" size="14"></i> ${label}</div>
                 <div class="bubble-content">${role === 'user' ? escapeHtml(content) : content}</div>
             `;
-            
             chatArea.appendChild(div);
             lucide.createIcons();
             chatArea.scrollTop = chatArea.scrollHeight;
             return div;
         }
 
-        function escapeHtml(text) {
-            return text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-        }
+        function escapeHtml(text) { return text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
         
         lucide.createIcons();
     </script>

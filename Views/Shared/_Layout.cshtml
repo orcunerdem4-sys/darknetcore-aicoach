@@ -141,6 +141,7 @@
                 <a asp-controller="Dashboard" asp-action="Notebook" class="nav-link @(ViewContext.RouteData.Values["Action"]?.ToString() == "Notebook" ? "active" : "")">
                     <i data-lucide="book-open" class="nav-icon"></i> Akıllı Defter
                 </a>
+
                 <a asp-controller="Group" asp-action="Index" class="nav-link @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Group" ? "active" : "")">
                     <i data-lucide="users" class="nav-icon"></i> Çalışma Grubu
                 </a>
@@ -333,6 +334,7 @@
                 <i data-lucide="book-open"></i>
                 <span>Defter</span>
             </a>
+
             <a id="navExamBtn" href="/Dashboard/Exam" class="bottom-nav-item d-none @(ViewContext.RouteData.Values["Action"]?.ToString() == "Exam" ? "active" : "")">
                 <i data-lucide="graduation-cap"></i>
                 <span>Sınav</span>
