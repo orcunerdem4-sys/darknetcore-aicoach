@@ -550,54 +550,84 @@
     });
 
     function renderCommandButtons(parent) {
+        if (parent.querySelector('.batch-approval-container')) return;
+        
+        const taskContainers = [];
         parent.querySelectorAll('.ai-command-container').forEach(container => {
             if (container.children.length > 0) return;
             const cmdData = container.dataset.command;
             const cmd = JSON.parse(cmdData);
             
             if (cmd.command === 'add_task') {
-                container.innerHTML = `
-                    <button class="btn-approval btn-approve" onclick='confirmTask(this, ${JSON.stringify(cmdData)})'>
-                        <i data-lucide="check" size="16"></i> Onayla
-                    </button>
-                    <button class="btn-approval btn-reject" onclick='rejectTask(this)'>
-                        <i data-lucide="x" size="16"></i> Reddet
-                    </button>
-                `;
-                lucide.createIcons({ props: { size: 16 } });
+                taskContainers.push({ container, cmdData });
             }
         });
-    }
 
-    async function confirmTask(btn, cmdJson) {
-        const container = btn.closest('.ai-command-container');
-        btn.innerHTML = '<i class="spinner-border spinner-border-sm"></i> Bekleyin...';
-        btn.disabled = true;
-        
-        try {
-            const res = await fetch('/Dashboard/ExecuteAiCommand', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: cmdJson
+        if (taskContainers.length > 0) {
+            // Her görev satırındaki butonları küçültüp bilgi notu haline getir
+            taskContainers.forEach((tc, index) => {
+                tc.container.innerHTML = `<span class="text-muted small px-2 py-1 rounded bg-card border"><i data-lucide="calendar" size="14"></i> Planlanan Görev</span>`;
             });
-            const data = await res.json();
-            if (data.success) {
-                container.innerHTML = `<span class="text-success small fw-bold"><i data-lucide="check-circle" size="14"></i> Görev Takvime Eklendi</span>`;
-                lucide.createIcons();
-            } else {
-                alert(data.message);
-                btn.disabled = false;
-                btn.textContent = 'Tekrar Dene';
-            }
-        } catch (e) {
-            alert('Hata: ' + e.message);
-            btn.disabled = false;
-        }
-    }
 
-    function rejectTask(btn) {
-        const container = btn.closest('.ai-command-container');
-        container.innerHTML = `<span class="text-muted small italic">Plan reddedildi.</span>`;
+            // En alta toplu onay kutusu ekle
+            const batchDiv = document.createElement('div');
+            batchDiv.className = 'batch-approval-container mt-3 p-2 rounded flex-wrap gap-2 d-flex align-items-center justify-content-between';
+            batchDiv.style.background = 'var(--bg-input)';
+            batchDiv.style.border = '1px solid var(--border-dim)';
+            
+            batchDiv.innerHTML = `
+                <span class="small fw-bold text-dark"><i data-lucide="layers" size="16" class="me-1"></i> ${taskContainers.length} Görev Planı Hazır</span>
+                <div class="d-flex gap-2">
+                    <button class="btn-approval btn-approve py-1 px-3 batch-approve-btn">
+                        <i data-lucide="check" size="14"></i> Tümünü Onayla
+                    </button>
+                    <button class="btn-approval btn-reject py-1 px-3 batch-reject-btn">
+                        <i data-lucide="x" size="14"></i> Reddet
+                    </button>
+                </div>
+            `;
+            parent.appendChild(batchDiv);
+            
+            const btnApprove = batchDiv.querySelector('.batch-approve-btn');
+            const btnReject = batchDiv.querySelector('.batch-reject-btn');
+            
+            btnApprove.addEventListener('click', async function() {
+                const container = this.closest('.batch-approval-container');
+                this.innerHTML = '<i class="spinner-border spinner-border-sm"></i> Bekleyin...';
+                this.disabled = true;
+                btnReject.disabled = true;
+                
+                try {
+                    let successCount = 0;
+                    for (let cmdJsonStr of taskContainers.map(t => t.cmdData)) {
+                        const res = await fetch('/Dashboard/ExecuteAiCommand', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: cmdJsonStr
+                        });
+                        const data = await res.json();
+                        if (data.success) successCount++;
+                    }
+                    
+                    container.innerHTML = \`<span class="text-success small fw-bold"><i data-lucide="check-circle" size="14"></i> \${successCount} Görev Takvime Eklendi</span>\`;
+                    lucide.createIcons();
+                } catch (e) {
+                    alert('Hata: ' + e.message);
+                    this.disabled = false;
+                    btnReject.disabled = false;
+                    this.innerHTML = '<i data-lucide="check" size="14"></i> Tümünü Onayla';
+                    lucide.createIcons();
+                }
+            });
+            
+            btnReject.addEventListener('click', function() {
+                const container = this.closest('.batch-approval-container');
+                container.innerHTML = \`<span class="text-muted small italic"><i data-lucide="info" size="14"></i> Plan reddedildi.</span>\`;
+                lucide.createIcons();
+            });
+
+            lucide.createIcons();
+        }
     }
 
     async function showFilePreview(fileId) {
