@@ -453,24 +453,48 @@ public class DashboardController : Controller
             foreach (var sheet in workbook.Worksheets)
             {
                 sb.AppendLine($"=== Sayfa: {sheet.Name} ===");
-                var rows = sheet.RangeUsed()?.RowsUsed().Take(500);
-                if (rows == null) { sb.AppendLine("(boş sayfa)"); continue; }
+                var rows = sheet.RangeUsed()?.RowsUsed()?.Take(500);
+                if (rows == null || !rows.Any()) { sb.AppendLine("(boş sayfa)"); continue; }
 
                 var maxCol = sheet.LastColumnUsed()?.ColumnNumber() ?? 15;
+
+                // Create Markdown Table Header
+                var headers = new List<string> { "Satır" };
+                for (int i = 1; i <= maxCol; i++)
+                {
+                    headers.Add(sheet.Column(i).ColumnLetter());
+                }
+                sb.AppendLine("| " + string.Join(" | ", headers) + " |");
+                sb.AppendLine("|-" + string.Join("-|-", headers.Select(h => new string('-', Math.Max(h.Length, 3)))) + "-|");
 
                 foreach (var row in rows)
                 {
                     var rowData = new List<string>();
                     for (int i = 1; i <= maxCol; i++)
                     {
-                        var val = row.Cell(i).GetString()?.Trim() ?? "";
-                        var colLetter = sheet.Column(i).ColumnLetter();
-                        rowData.Add($"[{colLetter}]: " + (string.IsNullOrEmpty(val) ? "(boş)" : val));
+                        var cell = row.Cell(i);
+                        string val = "";
+                        
+                        if (cell.IsMerged()) 
+                        {
+                            var mergedRange = cell.MergedRange();
+                            if (mergedRange != null) {
+                                val = mergedRange.FirstCell().GetFormattedString()?.Trim() ?? "";
+                            }
+                        } 
+                        else 
+                        {
+                            val = cell.GetFormattedString()?.Trim() ?? "";
+                        }
+                        
+                        // Clean values so they don't break the markdown table format
+                        val = val.Replace("\r\n", " ").Replace("\n", " ").Replace("\r", "").Replace("|", "-");
+                        rowData.Add(string.IsNullOrEmpty(val) ? "-" : val);
                     }
                     
-                    if (rowData.All(x => x.EndsWith("(boş)"))) continue; // Tamamen boş satırı atla
+                    if (rowData.All(x => x == "-")) continue; // Skip completely empty rows seamlessly
                     
-                    sb.AppendLine($"Satır {row.RowNumber()} | " + string.Join(" | ", rowData));
+                    sb.AppendLine($"| {row.RowNumber()} | " + string.Join(" | ", rowData) + " |");
                 }
                 sb.AppendLine();
             }
@@ -810,39 +834,33 @@ public class DashboardController : Controller
         scheduleBuilder.AppendLine($"🕐 Şu anki tarih ve saat (Türkiye): {nowTurkey:dddd, dd MMMM yyyy HH:mm} (Türk saatiyle)");
         scheduleBuilder.AppendLine();
 
-        for (int day = 0; day <= 6; day++)
+        var activeTasks = upcomingTasksList
+            .Where(t => !t.IsCompleted)
+            .OrderBy(t => t.DueDate)
+            .ToList();
+
+        if (activeTasks.Any())
         {
-            var targetDate = nowTurkey.Date.AddDays(day);
-            var dayLabel = day == 0 ? "Bugün" : day == 1 ? "Yarın" : targetDate.ToString("dddd, dd MMM");
-
-            var dayTasks = upcomingTasksList
-                .Where(t =>
-                {
-                    var tLocal = TimeZoneInfo.ConvertTimeFromUtc(
-                        DateTime.SpecifyKind(t.DueDate, DateTimeKind.Utc), turkeyTz);
-                    return tLocal.Date == targetDate && !t.IsCompleted;
-                })
-                .OrderBy(t => t.DueDate)
-                .ToList();
-
-            if (dayTasks.Any())
+            var groupedByDate = activeTasks.GroupBy(t => TimeZoneInfo.ConvertTimeFromUtc(DateTime.SpecifyKind(t.DueDate, DateTimeKind.Utc), turkeyTz).Date);
+            foreach (var dateGroup in groupedByDate)
             {
-                scheduleBuilder.AppendLine($"📅 {dayLabel} ({targetDate:dd MMM}):");
-                foreach (var t in dayTasks)
+                var targetDate = dateGroup.Key;
+                var diffDays = (targetDate - nowTurkey.Date).Days;
+                var dayLabel = diffDays == 0 ? "Bugün" : diffDays == 1 ? "Yarın" : diffDays == -1 ? "Dün" : targetDate.ToString("dddd");
+
+                scheduleBuilder.AppendLine($"📅 {dayLabel} ({targetDate:dd MMM yyyy}):");
+                foreach (var t in dateGroup)
                 {
-                    var tLocal = TimeZoneInfo.ConvertTimeFromUtc(
-                        DateTime.SpecifyKind(t.DueDate, DateTimeKind.Utc), turkeyTz);
-                    scheduleBuilder.AppendLine($"  - {tLocal:HH:mm}: {t.Title} ({t.DurationHours}s, {t.Priority})");
+                    var tLocal = TimeZoneInfo.ConvertTimeFromUtc(DateTime.SpecifyKind(t.DueDate, DateTimeKind.Utc), turkeyTz);
+                    scheduleBuilder.AppendLine($"  - [ID: {t.Id}] {tLocal:HH:mm}: {t.Title} ({t.DurationHours}s, {t.Priority})");
                 }
                 scheduleBuilder.AppendLine();
             }
         }
-
-        var tasksInNextWeek = upcomingTasksList
-            .Where(t => t.DueDate >= DateTime.UtcNow && t.DueDate <= DateTime.UtcNow.AddDays(7) && !t.IsCompleted)
-            .ToList();
-        if (!tasksInNextWeek.Any())
-            scheduleBuilder.AppendLine("Önümüzdeki 7 günde hiç görev bulunmuyor.");
+        else
+        {
+            scheduleBuilder.AppendLine("Takviminizde gelecek veya beklemede olan hiçbir görev bulunmuyor.");
+        }
 
         var scheduleContext = scheduleBuilder.ToString();
 
@@ -937,6 +955,68 @@ public class DashboardController : Controller
                         await _dataService.AddTaskAsync(task);
                         return Json(new { success = true, message = "Görev başarıyla eklendi!" });
                     }
+                }
+                else if (cmd == "add_tasks_batch")
+                {
+                    if (root.TryGetProperty("tasks", out var tasksArray))
+                    {
+                        int addedCount = 0;
+                        foreach (var t in tasksArray.EnumerateArray())
+                        {
+                            // Expected format: ["Class Name", "2026-03-24T10:00:00", 1.5]
+                            if (t.GetArrayLength() >= 3)
+                            {
+                                var title = t[0].GetString();
+                                var dateStr = t[1].GetString();
+                                var duration = t[2].GetDouble();
+
+                                if (DateTime.TryParse(dateStr, out var date))
+                                {
+                                    var task = new TaskItem
+                                    {
+                                        Id = Guid.NewGuid().ToString(),
+                                        Title = title ?? "Ders",
+                                        Description = "🤖 AI Plan: Toplu takvim aktarımı.",
+                                        DueDate = date.ToUniversalTime(),
+                                        DurationHours = duration,
+                                        Priority = TaskPriority.High,
+                                        Category = TaskCategory.Study,
+                                        DifficultyScore = 3,
+                                        DifficultyReason = ""
+                                    };
+                                    await _dataService.AddTaskAsync(task);
+                                    addedCount++;
+                                }
+                            }
+                        }
+                        return Json(new { success = true, message = $"{addedCount} adet ders toplu olarak başarıyla eklendi!" });
+                    }
+                }
+                else if (cmd == "delete_tasks_batch")
+                {
+                    if (root.TryGetProperty("taskIds", out var taskIdsArray))
+                    {
+                        int deletedCount = 0;
+                        foreach (var idElem in taskIdsArray.EnumerateArray())
+                        {
+                            var id = idElem.GetString();
+                            if (!string.IsNullOrEmpty(id))
+                            {
+                                await _dataService.DeleteTaskAsync(id);
+                                deletedCount++;
+                            }
+                        }
+                        return Json(new { success = true, message = $"{deletedCount} adet görev başarıyla silindi!" });
+                    }
+                }
+                else if (cmd == "clear_all_tasks")
+                {
+                    var tasks = await _dataService.GetTasksAsync();
+                    int deletedCount = tasks.Count;
+                    foreach (var t in tasks) {
+                        await _dataService.DeleteTaskAsync(t.Id);
+                    }
+                    return Json(new { success = true, message = $"Sistemdeki tüm AI ve manuel görevler ({deletedCount} adet) tamamen sıfırlandı!" });
                 }
             }
         }

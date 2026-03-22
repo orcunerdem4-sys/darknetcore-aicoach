@@ -104,8 +104,9 @@
         #chatMessages { padding: 16px 12px; }
         .chat-bubble { max-width: 92%; }
         .bubble-content { font-size: 1rem; }
-        .chat-input-area { padding: 8px 12px 100px 12px; } /* Increased bottom padding for nav bar */
-        .input-pill-container { min-height: 48px; }
+        /* Reduced bottom padding to fix the overly tall input container */
+        .chat-input-area { padding: 8px 12px 24px 12px; } 
+        .input-pill-container { min-height: 48px; border-radius: 24px; }
     }
     @@media (min-width: 768px) { #sidebarToggleBtn { display: none !important; } }
     
@@ -302,7 +303,7 @@
         </div>
 
         <!-- Messages -->
-        <div id="chatMessages" class="flex-grow-1 p-0" style="overflow-y:auto; scroll-behavior: smooth;">
+        <div id="mainChatMessages" class="flex-grow-1 p-0" style="overflow-y:auto; scroll-behavior: smooth;">
             @if (!messages.Any())
             {
                 <div class="text-start mt-5" id="emptyState">
@@ -369,7 +370,7 @@
                 </button>
                 <input type="file" id="chatFileInput" class="d-none" accept="image/*" />
                 
-                <textarea id="chatInput" class="form-control" rows="1"
+                <textarea id="mainChatInput" class="form-control" rows="1"
                     placeholder="Dopamind'a bir şey sor (Görsel yapıştırın veya sürükleyin)..."
                     style="resize:none; max-height:150px;"></textarea>
                 
@@ -377,7 +378,7 @@
                     <i data-lucide="mic" id="micIcon" size="20"></i>
                 </button>
                 
-                <button id="sendBtn" class="input-action-btn" title="Gönder">
+                <button id="sendBtn" onclick="try { sendMessage(); } catch(e) { alert(e.message); }" type="button" class="input-action-btn" title="Gönder">
                     <i data-lucide="send" size="20"></i>
                 </button>
             </div>
@@ -413,17 +414,30 @@
 <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 <script>
     const sessionIdInput = document.getElementById('currentSessionId');
-    const chatMessages = document.getElementById('chatMessages');
-    const chatInput = document.getElementById('chatInput');
+    const chatMessages = document.getElementById('mainChatMessages');
+    const chatInput = document.getElementById('mainChatInput');
     const sendBtn = document.getElementById('sendBtn');
     const attachBtn = document.getElementById('attachBtn');
     const chatFileInput = document.getElementById('chatFileInput');
     const contextInfo = document.getElementById('contextInfo');
     const mediaPreview = document.getElementById('attachedMediaPreview');
     const newChatBtn = document.getElementById('newChatBtn');
+    const typingIndicator = document.getElementById('typingIndicator');
 
     let attachedFileIds = [];
     let transientPaths = [];
+
+    // Optional Enter listener logic inline here to avoid JS crashing
+    if(chatInput) {
+        chatInput.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                try {
+                    e.preventDefault();
+                    sendMessage();
+                } catch(err) { alert("Enter Error: " + err.message); }
+            }
+        });
+    }
 
     if (chatMessages) {
         chatMessages.scrollTop = chatMessages.scrollHeight;
@@ -502,43 +516,12 @@
         });
     }
 
-    // Configure marked for custom rendering
-    const renderer = {
-        link(token) {
-            const href = token.href || '';
-            const title = token.title || '';
-            const text = token.text || '';
-            // If the link looks like a file ID (e.g. from our system)
-            if (href.startsWith('file-')) {
-                return `<span class="file-preview-link" onclick="showFilePreview('${href.substring(5)}')"><i data-lucide="file" size="14"></i> ${text}</span>`;
-            }
-            let isDoc = href.toLowerCase().includes('pdf') || href.toLowerCase().includes('doc') || text.toLowerCase().includes('dosya') || text.toLowerCase().includes('belge');
-            let icon = isDoc ? '<i data-lucide="file-text" size="16"></i>' : '<i data-lucide="external-link" size="16"></i>';
-            return `<a href="${href}" title="${title}" target="_blank" rel="noopener noreferrer" class="ai-custom-link-btn">${icon}<span>${text}</span></a>`;
-        },
-        table(token) {
-            const header = token.header.map(cell => `<th>${marked.parseInline(cell.text)}</th>`).join('');
-            const body = token.rows.map(row =>
-                `<tr>${row.map(cell => `<td>${marked.parseInline(cell.text)}</td>`).join('')}</tr>`
-            ).join('');
-            return `<div class="table-responsive"><table class="ai-custom-table"><thead><tr>${header}</tr></thead><tbody>${body}</tbody></table></div>`;
-        },
-        list(token) {
-            // Recalculate body by parsing each item's text as inline markdown
-            const body = token.items.map(item => {
-                // If the item has tokens, use marked.parse on them, otherwise use item.text
-                const itemText = item.tokens ? marked.parser(item.tokens) : marked.parseInline(item.text);
-                return `<li>${itemText}</li>`;
-            }).join('');
-            
-            if (token.ordered) {
-                return `<ol class="ai-custom-list ordered-list" start="${token.start || 1}">${body}</ol>`;
-            }
-            return `<ul class="ai-custom-list">${body}</ul>`;
-        }
-    };
-
-    marked.use({ renderer });
+    // Use marked defaults and add breaks
+    try {
+        marked.use({ breaks: true });
+    } catch (e) {
+        console.error("Marked Init Error:", e);
+    }
 
     // Helper: always read current session id dynamically
     function getSessionId() { return sessionIdInput.value || null; }
@@ -609,7 +592,7 @@
                         if (data.success) successCount++;
                     }
                     
-                    container.innerHTML = \`<span class="text-success small fw-bold"><i data-lucide="check-circle" size="14"></i> \${successCount} Görev Takvime Eklendi</span>\`;
+                    container.innerHTML = `<span class="text-success small fw-bold"><i data-lucide="check-circle" size="14"></i> ${successCount} Görev Takvime Eklendi</span>`;
                     lucide.createIcons();
                 } catch (e) {
                     alert('Hata: ' + e.message);
@@ -622,7 +605,7 @@
             
             btnReject.addEventListener('click', function() {
                 const container = this.closest('.batch-approval-container');
-                container.innerHTML = \`<span class="text-muted small italic"><i data-lucide="info" size="14"></i> Plan reddedildi.</span>\`;
+                container.innerHTML = `<span class="text-muted small italic"><i data-lucide="info" size="14"></i> Plan reddedildi.</span>`;
                 lucide.createIcons();
             });
 
@@ -737,15 +720,31 @@
     }
 
     // New chat
-    document.getElementById('newChatBtn').addEventListener('click', async () => {
-        const res = await fetch('/Dashboard/NewChatSession', { method: 'POST', headers: { 'RequestVerificationToken': getAntiForgeryToken() } });
-        const data = await res.json();
-        if (data.success) window.location.href = '/Dashboard/Chat?sessionId=' + data.sessionId;
-    });
+    document.getElementById('newChatBtn').addEventListener('click', async function() {
+        const btn = this;
+        const originalHtml = btn.innerHTML;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm border-success" role="status" aria-hidden="true" style="width: 14px; height: 14px;"></span>';
+        btn.disabled = true;
 
-    function getAntiForgeryToken() {
-        return document.querySelector('input[name="__RequestVerificationToken"]')?.value ?? '';
-    }
+        try {
+            const res = await fetch('/Dashboard/NewChatSession', { method: 'POST' });
+            if (!res.ok) throw new Error('HTTP ' + res.status);
+            
+            const data = await res.json();
+            if (data.success) {
+                window.location.href = '/Dashboard/Chat?sessionId=' + data.sessionId;
+            } else {
+                alert("Hata: " + (data.message || "Yeni sohbet sayfası yüklenirken bir sorun oluştu."));
+                btn.innerHTML = originalHtml;
+                btn.disabled = false;
+            }
+        } catch (e) {
+            console.error("New chat error: ", e);
+            alert("Beklenmeyen bir hata oluştu: Bağlantınızı kontrol edin.");
+            btn.innerHTML = originalHtml;
+            btn.disabled = false;
+        }
+    });
 
     // ── Mobile Sidebar Toggle ──────────────────────────────────
     const chatSidebar = document.getElementById('chatSidebar');
@@ -770,51 +769,61 @@
     });
 
     function appendMessage(role, content) {
-        const wrapper = document.createElement('div');
-        wrapper.className = `chat-bubble-wrapper ${role === 'user' ? 'user-bubble-wrapper' : 'ai-bubble-wrapper'} mb-3`;
+        try {
+            const wrapper = document.createElement('div');
+            wrapper.className = `chat-bubble-wrapper ${role === 'user' ? 'user-bubble-wrapper' : 'ai-bubble-wrapper'} mb-3`;
 
-        const time = new Date().toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
+            const timeStr = new Date().toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
 
-        if (role !== 'user') {
-            // Add avatar for AI
-            const avatar = document.createElement('div');
-            avatar.className = 'ai-avatar-sm me-3 mt-1';
-            avatar.style.cssText = 'width:24px;height:24px;border-radius:50%;background:linear-gradient(135deg, #4285f4, #9b72cb);display:flex;align-items:center;justify-content:center;flex-shrink:0;';
-            avatar.innerHTML = '<i data-lucide="sparkles" size="14" style="color:white;"></i>';
-            wrapper.appendChild(avatar);
+            if (role !== 'user') {
+                const avatar = document.createElement('div');
+                avatar.className = 'ai-avatar-sm me-3 mt-1';
+                avatar.style.cssText = 'width:24px;height:24px;border-radius:50%;background:linear-gradient(135deg, #4285f4, #9b72cb);display:flex;align-items:center;justify-content:center;flex-shrink:0;';
+                avatar.innerHTML = '<i data-lucide="sparkles" size="14" style="color:white;"></i>';
+                wrapper.appendChild(avatar);
+            }
+
+            const bubble = document.createElement('div');
+            bubble.className = `chat-bubble ${role === 'user' ? 'user-bubble' : 'ai-bubble'}`;
+
+            const bubbleContent = document.createElement('div');
+            bubbleContent.className = 'bubble-content';
+            try {
+                bubbleContent.innerHTML = role === 'user' ? escapeHtml(content) : (typeof marked !== 'undefined' ? marked.parse(content) : escapeHtml(content));
+            } catch(ee) { bubbleContent.innerText = content; }
+
+            const bubbleTime = document.createElement('div');
+            bubbleTime.className = 'bubble-time';
+            bubbleTime.textContent = timeStr;
+
+            bubble.appendChild(bubbleContent);
+            bubble.appendChild(bubbleTime);
+            wrapper.appendChild(bubble);
+
+            const es = document.getElementById('emptyState');
+            if(es) es.remove();
+
+            if(chatMessages && typingIndicator) {
+                chatMessages.insertBefore(wrapper, typingIndicator);
+            } else if(chatMessages) {
+                chatMessages.appendChild(wrapper);
+            }
+
+            if (role !== 'user') {
+                requestAnimationFrame(() => {
+                    wrapper.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                });
+            } else {
+                scrollToBottom();
+            }
+
+            if(typeof lucide !== 'undefined') lucide.createIcons();
+            return wrapper;
+        } catch (err) {
+            console.error("appendMessage error:", err);
+            alert("Sohbet baloncuğu oluşturulurken hata: " + err.message);
+            return null;
         }
-
-        const bubble = document.createElement('div');
-        bubble.className = `chat-bubble ${role === 'user' ? 'user-bubble' : 'ai-bubble'}`;
-
-        const bubbleContent = document.createElement('div');
-        bubbleContent.className = 'bubble-content';
-        bubbleContent.innerHTML = role === 'user' ? escapeHtml(content) : marked.parse(content);
-
-        const bubbleTime = document.createElement('div');
-        bubbleTime.className = 'bubble-time';
-        bubbleTime.textContent = time;
-
-        bubble.appendChild(bubbleContent);
-        bubble.appendChild(bubbleTime);
-        wrapper.appendChild(bubble);
-
-        // Remove empty state if exists
-        document.getElementById('emptyState')?.remove();
-
-        chatMessages.insertBefore(wrapper, typingIndicator);
-
-        // Scroll to TOP of the new AI message so user reads from beginning
-        if (role !== 'user') {
-            requestAnimationFrame(() => {
-                wrapper.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            });
-        } else {
-            scrollToBottom();
-        }
-
-        lucide.createIcons();
-        return wrapper;
     }
 
     function escapeHtml(text) {
@@ -827,18 +836,44 @@
     }
 
     async function sendMessage() {
-        const msg = chatInput.value.trim();
-        if (!msg && transientPaths.length === 0 && attachedFileIds.length === 0) return;
-
-        appendMessage('user', msg || (transientPaths.some(p => p.endsWith('.webm')) ? "🎤 Sesli mesaj gönderildi" : "📷 Görsel gönderildi"));
-        chatInput.value = '';
-        chatInput.style.height = 'auto';
-
-        typingIndicator.classList.remove('d-none');
-        scrollToBottom();
-        sendBtn.disabled = true;
-
         try {
+            const msg = (chatInput && chatInput.value) ? chatInput.value.trim() : '';
+            if (!msg && attachedFileIds.length === 0 && transientPaths.length === 0) return;
+
+            let attachedHtml = "";
+            if (transientPaths.length > 0 || attachedFileIds.length > 0) {
+                attachedHtml = "<div class='mt-2 d-flex flex-wrap gap-2'>";
+                transientPaths.forEach(p => {
+                    if (p.endsWith('.webm')) attachedHtml += "<div class='small text-muted'><i data-lucide='mic' size='14'></i> Ses Kaydı</div>";
+                    else attachedHtml += `<img src="${p}" class="rounded border shadow-sm" style="max-height: 120px; max-width: 100%; object-fit: cover;">`;
+                });
+                attachedFileIds.forEach(id => {
+                    attachedHtml += `<div class='small text-muted'><i data-lucide='file' size='14'></i> Ekli Dosya (#${id})</div>`;
+                });
+                attachedHtml += "</div>";
+            }
+            
+            appendMessage('user', (msg || '') + attachedHtml);
+
+            // Save payload reference
+            const payloadFileIds = [...attachedFileIds];
+            const payloadTransientPaths = [...transientPaths];
+
+            // IMMEDIATE CLEAR
+            attachedFileIds = [];
+            transientPaths = [];
+            if(mediaPreview) mediaPreview.innerHTML = '';
+            if(contextInfo) contextInfo.textContent = '';
+            
+            if(chatInput) {
+                chatInput.value = '';
+                chatInput.style.height = 'auto';
+            }
+
+            if(typingIndicator) typingIndicator.classList.remove('d-none');
+            scrollToBottom();
+            if(sendBtn) sendBtn.disabled = true;
+
             const response = await fetch('/Dashboard/ChatWithAi', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -846,41 +881,37 @@
                     message: msg,
                     sessionId: getSessionId(),
                     intensityMode: getIntensityMode(),
-                    contextFileIds: attachedFileIds,
-                    transientPaths: transientPaths
+                    contextFileIds: payloadFileIds,
+                    transientPaths: payloadTransientPaths
                 })
             });
             const data = await response.json();
-            typingIndicator.classList.add('d-none');
-            if (data.success) {
-                const assistantMsg = appendMessage('assistant', data.response);
-                renderCommandButtons(assistantMsg.querySelector('.bubble-content'));
-                if (data.sessionId) {
-                    sessionIdInput.value = data.sessionId;
-                    history.replaceState(null, '', '/Dashboard/Chat?sessionId=' + data.sessionId);
+                if (data.success) {
+                    const assistantMsg = appendMessage('assistant', data.response);
+                    if(assistantMsg) renderCommandButtons(assistantMsg.querySelector('.bubble-content'));
+                    if (data.sessionId && sessionIdInput) {
+                        sessionIdInput.value = data.sessionId;
+                        history.replaceState(null, '', '/Dashboard/Chat?sessionId=' + data.sessionId);
+                    }
+                } else {
+                    appendMessage('assistant', '⚠️ ' + (data.response || 'Bir hata oluştu.'));
                 }
-            } else {
-                appendMessage('assistant', '⚠️ ' + (data.response || 'Bir hata oluştu.'));
+                
+            } catch (err) {
+                console.error("sendMessage error:", err);
+                alert("Mesaj gönderilirken sunucu hatası: " + err.message);
+            } finally {
+                // Reset media after send (moved here to ensure it always happens)
+                attachedFileIds = [];
+                transientPaths = [];
+                if(mediaPreview) mediaPreview.innerHTML = '';
+                if(contextInfo) contextInfo.textContent = '';
+
+                if(typingIndicator) typingIndicator.classList.add('d-none');
+                if(sendBtn) sendBtn.disabled = false;
             }
-            // Reset media after send
-            attachedFileIds = [];
-            transientPaths = [];
-            mediaPreview.innerHTML = '';
-            contextInfo.textContent = '';
-        } catch (e) {
-            typingIndicator.classList.add('d-none');
-            appendMessage('assistant', '⚠️ Bağlantı hatası: ' + e.message);
-        }
-        sendBtn.disabled = false;
     }
 
-    // Send on Enter (Shift+Enter for newline)
-    chatInput.addEventListener('keydown', function (e) {
-        if (e.key === 'Enter' && !e.shiftKey) {
-            e.preventDefault();
-            sendMessage();
-        }
-    });
-    sendBtn.addEventListener('click', sendMessage);
+    // (Event listeners moved to the top of script to guarantee attachment)
 </script>
 }

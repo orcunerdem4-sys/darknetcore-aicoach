@@ -92,12 +92,10 @@ Example JSON: {{ ""topic"": ""Biology"", ""complexityScore"": 7, ""wordCount"": 
             userMessage = "Seçili kaynaklara dayalı soru-cevap kartları oluştur.";
         }
 
-        var contents = new List<object> { new { role = "user", parts = new[] { new { text = sb.ToString() } } } };
-        contents.Add(new { role = "model", parts = new[] { new { text = "Anlaşıldı. Sadece bu kaynaklara sadık kalarak yanıt vereceğim. Nasıl yardımcı olabilirim?" } } });
-        contents.Add(new { role = "user", parts = new[] { new { text = userMessage } } });
+        var contents = new List<object> { new { role = "user", parts = new[] { new { text = userMessage } } } };
 
         // Use Pro model for deeper reasoning if available, otherwise fallback to flash
-        return await CallGeminiRawAsync(contents);
+        return await CallGeminiRawAsync(contents, sb.ToString());
     }
 
     public async Task<string> ChatAsync(
@@ -244,21 +242,26 @@ Example JSON: {{ ""topic"": ""Biology"", ""complexityScore"": 7, ""wordCount"": 
         sb.AppendLine("4. UZUN YAZILARDAN KAÇIN: Madde listesi veya tablo kullan. Paragraf ancak açıklama gerektirdiğinde.");
         sb.AppendLine("5. KISA TUT: Yanıtlar mümkün olduğunca öz olsun. Kullanıcı zaten verileri biliyor; analiz ve yönlendirme ver.");
         sb.AppendLine("6. İNTERNET ERİŞİMİ YOK (404 HATASI VERME): Kendi başına URL'leri veya linkleri ziyaret edemezsin. '404 Not Found' hatası aldığını SÖYLEME. İçerikler sana doğrudan (özet veya tam metin olarak) yukarıda verilmiştir. Göremediklerin için 'içerik aktarılmadı' diyebilirsin ama asla linke gitmeye çalıştığını söyleme.");
+        sb.AppendLine("7. ASLA SOHBETİ UZATMA: 'Başka bir sorun var mı', 'Yardımcı olabileceğim başka bir şey', 'Daha fazla sorun olursa buradayım' gibi klişe sohbet bitiş/giriş cümleleri KESİNLİKLE KULLANMA. Sen bir sohbet botu değil, doğrudan isteneni yapan, lafı uzatmayan bir veri işleme ve aksiyon motorusun.");
         sb.AppendLine();
-        sb.AppendLine("🛠️ GÖREV EKLEME/SİLME KOMUTLARI:");
+        sb.AppendLine("🛠️ GÖREV EKLEME KOMUTLARI:");
         sb.AppendLine("Takvime işlem yapman gerekiyorsa MUTLAKA ```json ve ``` kullan (aksi takdirde çalışmaz).");
-        sb.AppendLine("Her görev için ayrı ```json bloğu. Ekledikten sonra 1-2 cümle onay mesajı ver.");
-        sb.AppendLine("Örnek: ```json\n{ \"command\": \"add_task\", \"title\": \"Farmakoloji Tekrar\", \"date\": \"2026-03-13T14:00:00\", \"durationHours\": 1.5, \"priority\": \"High\", \"difficultyScore\": 7, \"difficultyReason\": \"Yoğun konu.\" }\n```");
-        sb.AppendLine("⚠️ JSON bloğunu yazdıktan sonra ham metnini mesajda asla tekrar etme.");
+        sb.AppendLine("1. TEKLİ GÖREV: `add_task`. Örnek: ```json\n{ \"command\": \"add_task\", \"title\": \"Matematik\", \"date\": \"2026-03-13T14:00:00\", \"durationHours\": 1.5, \"priority\": \"High\", \"difficultyScore\": 7, \"difficultyReason\": \"-\" }\n```");
+        sb.AppendLine("2. TOPLU DÖNEMLİK TAKVİM KAYDI: Kullanıcı senden bir belgedeki tüm programı dönemin geri kalanı için topluca kaydetmeni isterse SAKIN tek tek `add_task` yazarak işlemi yarıda kesme! Sınırı aşmamak için şu süper-kısa Array formatını kullan: ");
+        sb.AppendLine("Örnek: ```json\n{ \"command\": \"add_tasks_batch\", \"tasks\": [ [\"Matematik\", \"2026-03-24T10:00:00\", 2.0], [\"Fizik\", \"2026-03-25T14:30:00\", 1.5] ] }\n```");
+        sb.AppendLine("  -> Bu formatta `[Ders Adı, ISO TarihSaati, Süre(Saat)]` şeklinde Array içinde Array kullan. Belgedeki HİÇBİR dersi atlamadan listeyi tamamla. Bu format aşırı kısadır, token sınırında korkmadan son güne kadar asla yarım bırakma.");
+        sb.AppendLine("⚠️ ZAMAN DİLİMİ UYARISI: Görev eklerken ISO formatlı saatlerde KESİNLİKLE saatten çıkarma veya toplama yapma (UTC hesabı yapma)! Belgede gördüğün yerel saati direkt olarak yaz (Örn 08:40 ise direkt `T08:40:00` olarak yaz, 'Z' harfi ekleme).");
+        sb.AppendLine("🛠️ GÖREV SİLME KOMUTLARI:");
+        sb.AppendLine("DİKKAT KİRİTİK KURAL: Görevleri silmek için kullanıcıya sadece 'sildim' yanıtı dönmen YETMEZ! Arkada çalışan sistemin bunu anlaması için KESİNLİKLE VE HER ZAMAN yanıtının sonuna bir ```json bloğu eklemek ZORUNDASIN. Json bloğu yazmazsan görevler SİLİNMEZ!");
+        sb.AppendLine("1. KISMEN SİLME (Bazılarını sil): `delete_tasks_batch`. Örnek çıktın şöyle olmalı: \n```json\n{ \"command\": \"delete_tasks_batch\", \"taskIds\": [\"id1\", \"id2\"] }\n```");
+        sb.AppendLine("2. TAMAMEN SIFIRLAMA (Her şeyi sil): Kullanıcı tüm takvimi silmeni isterse, tek kelime bile etmeden veya onay mesajından hemen sonra ŞU BLOĞU YAZMAK ZORUNDASIN:");
+        sb.AppendLine("```json\n{ \"command\": \"clear_all_tasks\" }\n```");
+        sb.AppendLine("Eğer bu bloğu yazmazsan, sistem çalışmayacaktır.");
 
         var systemPrompt = sb.ToString();
 
         // Build contents array for multimodal input
         var contentsList = new List<object>();
-
-        // 1. System Prompt
-        contentsList.Add(new { role = "user", parts = new[] { new { text = systemPrompt } } });
-        contentsList.Add(new { role = "model", parts = new[] { new { text = "Anlaşıldı! Sana yardımcı olmaya hazırım." } } });
 
         // 2. History
         if (history != null)
@@ -291,15 +294,26 @@ Example JSON: {{ ""topic"": ""Biology"", ""complexityScore"": 7, ""wordCount"": 
 
         contentsList.Add(new { role = "user", parts = currentParts.ToArray() });
 
-        return await CallGeminiRawAsync(contentsList);
+        return await CallGeminiRawAsync(contentsList, systemPrompt);
     }
 
-    private async Task<string> CallGeminiRawAsync(List<object> contents)
+    private async Task<string> CallGeminiRawAsync(List<object> contents, string? systemPrompt = null)
     {
         try
         {
             var url = $"https://generativelanguage.googleapis.com/v1beta/models/{ModelName}:generateContent?key={_apiKey}";
-            var requestBody = new { contents, generationConfig = new { temperature = 0.7, maxOutputTokens = 8192 } };
+            
+            var requestBody = new Dictionary<string, object>
+            {
+                { "contents", contents },
+                { "generationConfig", new { temperature = 0.7, maxOutputTokens = 8192 } }
+            };
+
+            if (!string.IsNullOrEmpty(systemPrompt))
+            {
+                requestBody["system_instruction"] = new { parts = new[] { new { text = systemPrompt } } };
+            }
+
             var jsonContent = new StringContent(JsonSerializer.Serialize(requestBody), Encoding.UTF8, "application/json");
 
             var response = await _httpClient.PostAsync(url, jsonContent);

@@ -218,6 +218,10 @@
                 </div>
 
                 <div class="list-group list-group-flush mb-4 rounded shadow-sm overflow-hidden">
+                    <a href="#" class="list-group-item list-group-item-action d-flex align-items-center py-3" style="background-color: var(--bg-card); color: var(--text-main); border-color: var(--border-dim);" data-bs-dismiss="offcanvas" data-bs-toggle="offcanvas" data-bs-target="#feedbackOffcanvas">
+                        <i data-lucide="pen-tool" class="me-3 text-success" size="20"></i>
+                        <span class="fw-medium">Akıllı Not Ekle</span>
+                    </a>
                     <a href="/Account/ResetPassword" class="list-group-item list-group-item-action d-flex align-items-center py-3" style="background-color: var(--bg-card); color: var(--text-main); border-color: var(--border-dim);">
                         <i data-lucide="key-round" class="me-3 text-primary" size="20"></i>
                         <span class="fw-medium">Şifre Sıfırla</span>
@@ -239,11 +243,7 @@
                 </div>
             </div>
         </div>
-        <!-- Floating Feedback/Notes Button -->
-        <button class="btn btn-primary shadow-lg d-flex align-items-center justify-content-center fw-bold btn-feedback-fab" 
-                type="button" data-bs-toggle="offcanvas" data-bs-target="#feedbackOffcanvas" aria-controls="feedbackOffcanvas">
-            <i data-lucide="pen-tool" size="20" class="text-white me-2"></i> Not Ekle
-        </button>
+        <!-- Floating Feedback/Notes Button Moved to Settings -->
 
         <!-- Feedback Offcanvas Panel -->
         <div class="offcanvas offcanvas-end shadow" tabindex="-1" id="feedbackOffcanvas" aria-labelledby="feedbackOffcanvasLabel" style="width: 400px; border-left: none;">
@@ -303,13 +303,10 @@
     </div>
 
     <!-- PWA Install Button (shown when installable on Chrome/Edge/Android) -->
-    <button id="pwaInstallBtn" style="display:none; position:fixed; bottom:90px; right:30px; z-index:1060;
-        background:linear-gradient(135deg,#059669,#10b981); color:white; border:none;
-        border-radius:25px; padding:0 20px; height:50px; box-shadow:0 4px 20px rgba(5,150,105,0.4);
-        font-weight:600; font-size:0.92rem; cursor:pointer; align-items:center; gap:8px;
-        transition:transform 0.2s, box-shadow 0.2s;" aria-label="Uygulamayı yükle">
-        <i data-lucide="download" style="width:18px;height:18px;"></i>
-        <span>Uygulamayı Yükle</span>
+    <button id="pwaInstallBtn" style="display:none; position:fixed; top:75px; right:20px; z-index:1060; 
+        border-radius:24px; padding:8px 16px; font-weight:600; box-shadow:0 4px 12px rgba(5,150,105,0.3);" 
+        class="btn btn-success d-flex align-items-center gap-2">
+        <i data-lucide="download" size="18"></i> Uygulamayı Yükle
     </button>
 
     <!-- Mobile Bottom Navigation Bar -->

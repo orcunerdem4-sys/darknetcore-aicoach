@@ -165,10 +165,7 @@ body.light-theme {
     color: var(--text-main) !important;
 }
 
-/* PWA button clash prevention */
-#pwaInstallBtn {
-    bottom: 160px !important; /* Move up to not clash with Feedback FAB */
-}
+/* Removed PWA button clash CSS to fix stretching issue */
 
 .file-upload-input {
     position: absolute;
