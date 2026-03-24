@@ -448,59 +448,63 @@ public class DashboardController : Controller
             using var workbook = new ClosedXML.Excel.XLWorkbook(filePath);
             var sb = new System.Text.StringBuilder();
             sb.AppendLine($"Excel Dosyası: {fileName}");
-            sb.AppendLine($"Sayfa sayısı: {workbook.Worksheets.Count}");
             sb.AppendLine();
 
             foreach (var sheet in workbook.Worksheets)
             {
-                sb.AppendLine($"=== Sayfa: {sheet.Name} ===");
                 var rows = sheet.RangeUsed()?.RowsUsed()?.Take(500)?.ToList();
-                if (rows == null || !rows.Any()) { sb.AppendLine("(boş sayfa)"); continue; }
+                if (rows == null || !rows.Any()) continue;
 
+                sb.AppendLine($"=== Sayfa: {sheet.Name} ===");
                 var maxCol = sheet.LastColumnUsed()?.ColumnNumber() ?? 15;
                 
-                // Track which (row, col) positions are NOT the top-left of their merged range
-                // so we can emit a "-" (empty) for continuation cells instead of repeating the value.
-                var duplicateMergedCells = new HashSet<(int row, int col)>();
+                // Birleştirilmiş hücrelerin değerini kapsadığı alana yayıyoruz ki alt saatler C# tarafından boş okunmasın
+                var mergedValues = new Dictionary<(int row, int col), string>();
                 foreach (var mergedRange in sheet.MergedRanges)
                 {
-                    bool first = true;
+                    var firstCell = mergedRange.FirstCell();
+                    string mergedVal = firstCell.GetFormattedString()?.Trim() ?? "";
+                    mergedVal = mergedVal.Replace("\r\n", " ").Replace("\n", " ").Replace("\r", "").Replace("|", "-");
+
                     foreach (var cell in mergedRange.Cells())
                     {
-                        if (first) { first = false; continue; }
-                        duplicateMergedCells.Add((cell.Address.RowNumber, cell.Address.ColumnNumber));
+                        mergedValues[(cell.Address.RowNumber, cell.Address.ColumnNumber)] = mergedVal;
                     }
                 }
 
-                // Emit a header row with column letters
-                var headers = new List<string> { "Satır" };
-                for (int i = 1; i <= maxCol; i++) headers.Add(sheet.Column(i).ColumnLetter());
-                sb.AppendLine("| " + string.Join(" | ", headers) + " |");
-                sb.AppendLine("|-" + string.Join("-|-", headers.Select(h => new string('-', Math.Max(h.Length, 3)))) + "-|");
-
+                // Sadece verilerin olduğu son derece sade bir Markdown Tablosu oluşturuyoruz
+                bool isFirstRow = true;
                 foreach (var row in rows)
                 {
                     var rowData = new List<string>();
                     for (int i = 1; i <= maxCol; i++)
                     {
-                        // If this cell is a continuation of a merged region, output empty
-                        if (duplicateMergedCells.Contains((row.RowNumber(), i)))
+                        string val = "";
+                        if (mergedValues.TryGetValue((row.RowNumber(), i), out var mVal))
                         {
-                            rowData.Add("");
-                            continue;
+                            val = mVal;
                         }
-                        
-                        var cell = row.Cell(i);
-                        string val = cell.GetFormattedString()?.Trim() ?? "";
-
-                        // Clean values so they don't break the markdown table format
-                        val = val.Replace("\r\n", " ").Replace("\n", " ").Replace("\r", "").Replace("|", "-");
-                        rowData.Add(val);
+                        else
+                        {
+                            var cell = row.Cell(i);
+                            val = cell.GetFormattedString()?.Trim() ?? "";
+                            val = val.Replace("\r\n", " ").Replace("\n", " ").Replace("\r", "").Replace("|", "-");
+                        }
+                        // Markdown tablosunun yapısı bozulmasın diye tamamen boş olanlara "-" koyuyoruz
+                        rowData.Add(string.IsNullOrEmpty(val) ? "-" : val);
                     }
 
-                    if (rowData.All(x => string.IsNullOrEmpty(x))) continue; // Skip completely empty rows
+                    // Eğer satırdaki her şey "-" (boş) ise bu satırı atla (gereksiz boşluklardan kurtul)
+                    if (rowData.All(x => x == "-")) continue;
 
-                    sb.AppendLine($"| {row.RowNumber()} | " + string.Join(" | ", rowData) + " |");
+                    sb.AppendLine("| " + string.Join(" | ", rowData) + " |");
+                    
+                    // Markdown standardına göre ilk veri satırından sonra ayrıştırıcı (---) eklenmeli
+                    if (isFirstRow)
+                    {
+                        sb.AppendLine("|" + string.Join("|", rowData.Select(x => "---")) + "|");
+                        isFirstRow = false;
+                    }
                 }
                 sb.AppendLine();
             }
@@ -513,6 +517,7 @@ public class DashboardController : Controller
             return $"Excel okunurken hata: {ex.Message}";
         }
     }
+
 
 
     [HttpPost]
@@ -704,18 +709,20 @@ public class DashboardController : Controller
 
             if (mimeType.StartsWith("application/vnd.google-apps."))
             {
-                // Export Google Docs/Sheets/Slides
+                // YENİ ÇÖZÜM 2: Google E-Tabloları CSV yerine doğrudan Excel (XLSX) olarak indiriyoruz.
+                // Çünkü CSV formatında hücre birleştirmeleri kayboluyor ve yapay zeka dersin saatini şaşırıyordu.
                 string exportMime = mimeType switch
                 {
-                    "application/vnd.google-apps.spreadsheet" => "text/csv",
+                    "application/vnd.google-apps.spreadsheet" => "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                     "application/vnd.google-apps.presentation" => "application/pdf",
                     _ => "application/pdf"
                 };
-                extension = exportMime.Contains("pdf") ? ".pdf" : ".csv";
+                extension = exportMime.Contains("spreadsheetml") ? ".xlsx" : ".pdf";
                 
                 var exportUrl = $"https://www.googleapis.com/drive/3/files/{fileId}/export?mimeType={Uri.EscapeDataString(exportMime)}";
                 fileBytes = await client.GetByteArrayAsync(exportUrl);
             }
+
             else
             {
                 // Download regular files
@@ -839,7 +846,7 @@ public class DashboardController : Controller
         scheduleBuilder.AppendLine($"🕐 Şu anki tarih ve saat (Türkiye): {nowTurkey:dddd, dd MMMM yyyy HH:mm} (Türk saatiyle)");
         scheduleBuilder.AppendLine();
 
-        // ── HAFTALIK GÜN→TARİH HARİTASI (geri almak için bu bloğu sil) ──
+        // ÇÖZÜM 1: YAPAY ZEKAYA KESİN TAKVİM HARİTASI VERİYORUZ
         scheduleBuilder.AppendLine("📅 İÇİNDE BULUNDUĞUMUZ HAFTANIN GÜNLERİ (Referans Haritası):");
         int currentDayOfWeek = nowTurkey.DayOfWeek == DayOfWeek.Sunday ? 7 : (int)nowTurkey.DayOfWeek;
         var startOfWeek = nowTurkey.Date.AddDays(-(currentDayOfWeek - 1));
@@ -848,9 +855,9 @@ public class DashboardController : Controller
             var day = startOfWeek.AddDays(i);
             scheduleBuilder.AppendLine($"  - {day:dddd}: {day:yyyy-MM-dd}");
         }
-        scheduleBuilder.AppendLine("⚠️ Programdaki 'Pazartesi', 'Salı' gibi günleri SADECE bu tarihlerle eşleştir. Kendin tarih hesaplama.");
+        scheduleBuilder.AppendLine("⚠️ Lütfen programdaki 'Pazartesi', 'Salı' gibi günleri sadece bu tarihlerle eşleştir. Kendin tarih hesaplama.");
         scheduleBuilder.AppendLine();
-        // ── HAFTALIK GÜN→TARİH HARİTASI SONU ──
+
 
         var activeTasks = upcomingTasksList
             .Where(t => !t.IsCompleted)
