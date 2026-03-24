@@ -839,6 +839,19 @@ public class DashboardController : Controller
         scheduleBuilder.AppendLine($"🕐 Şu anki tarih ve saat (Türkiye): {nowTurkey:dddd, dd MMMM yyyy HH:mm} (Türk saatiyle)");
         scheduleBuilder.AppendLine();
 
+        // ── HAFTALIK GÜN→TARİH HARİTASI (geri almak için bu bloğu sil) ──
+        scheduleBuilder.AppendLine("📅 İÇİNDE BULUNDUĞUMUZ HAFTANIN GÜNLERİ (Referans Haritası):");
+        int currentDayOfWeek = nowTurkey.DayOfWeek == DayOfWeek.Sunday ? 7 : (int)nowTurkey.DayOfWeek;
+        var startOfWeek = nowTurkey.Date.AddDays(-(currentDayOfWeek - 1));
+        for (int i = 0; i < 7; i++)
+        {
+            var day = startOfWeek.AddDays(i);
+            scheduleBuilder.AppendLine($"  - {day:dddd}: {day:yyyy-MM-dd}");
+        }
+        scheduleBuilder.AppendLine("⚠️ Programdaki 'Pazartesi', 'Salı' gibi günleri SADECE bu tarihlerle eşleştir. Kendin tarih hesaplama.");
+        scheduleBuilder.AppendLine();
+        // ── HAFTALIK GÜN→TARİH HARİTASI SONU ──
+
         var activeTasks = upcomingTasksList
             .Where(t => !t.IsCompleted)
             .OrderBy(t => t.DueDate)
