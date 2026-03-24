@@ -327,7 +327,15 @@
                             </div>
                         }
                         <div class="chat-bubble @(msg.Role == "user" ? "user-bubble" : "ai-bubble")">
-                            <div class="bubble-content" data-markdown="@msg.Content.Replace("\"", "&quot;")">@msg.Content</div>
+                            @if (msg.Role == "user")
+                            {
+                                <div class="bubble-content" style="white-space: pre-wrap;">@msg.Content</div>
+                            }
+                            else
+                            {
+                                <div class="bubble-content server-rendered-md d-none">@msg.Content</div>
+                                <div class="bubble-content md-rendered"></div>
+                            }
                         </div>
                     </div>
                 }
@@ -439,9 +447,8 @@
         });
     }
 
-    if (chatMessages) {
-        chatMessages.scrollTop = chatMessages.scrollHeight;
-    }
+    // Historical markdown messages will be rendered AFTER all functions are defined (see bottom of script)
+
 
     // Universal Image Capture Support
     chatInput.addEventListener('paste', (e) => {
@@ -535,34 +542,38 @@
     function renderCommandButtons(parent) {
         if (parent.querySelector('.batch-approval-container')) return;
         
-        const taskContainers = [];
+        const actionContainers = [];
         parent.querySelectorAll('.ai-command-container').forEach(container => {
             if (container.children.length > 0) return;
             const cmdData = container.dataset.command;
-            const cmd = JSON.parse(cmdData);
-            
-            if (cmd.command === 'add_task') {
-                taskContainers.push({ container, cmdData });
-            }
+            actionContainers.push({ container, cmdData });
         });
 
-        if (taskContainers.length > 0) {
-            // Her görev satırındaki butonları küçültüp bilgi notu haline getir
-            taskContainers.forEach((tc, index) => {
-                tc.container.innerHTML = `<span class="text-muted small px-2 py-1 rounded bg-card border"><i data-lucide="calendar" size="14"></i> Planlanan Görev</span>`;
+        if (actionContainers.length > 0) {
+            actionContainers.forEach((tc, index) => {
+                const cmd = JSON.parse(tc.cmdData);
+                let text = "Planlanan İşlem";
+                let icon = "cpu";
+                
+                if (cmd.command === 'add_task') { text = "Görev Ekleme"; icon = "calendar-plus"; }
+                else if (cmd.command === 'add_tasks_batch') { text = "Toplu Görev Ekleme"; icon = "layers"; }
+                else if (cmd.command === 'delete_tasks_batch') { text = "Görev Silme"; icon = "trash"; }
+                else if (cmd.command === 'delete_tasks_date_range') { text = "Tarih Aralığını Silme"; icon = "calendar-minus"; }
+                else if (cmd.command === 'clear_all_tasks') { text = "Tüm Görevleri Sıfırlama"; icon = "alert-triangle"; }
+
+                tc.container.innerHTML = `<span class="text-muted small px-2 py-1 rounded bg-card border"><i data-lucide="${icon}" size="14"></i> ${text}</span>`;
             });
 
-            // En alta toplu onay kutusu ekle
             const batchDiv = document.createElement('div');
             batchDiv.className = 'batch-approval-container mt-3 p-2 rounded flex-wrap gap-2 d-flex align-items-center justify-content-between';
             batchDiv.style.background = 'var(--bg-input)';
             batchDiv.style.border = '1px solid var(--border-dim)';
             
             batchDiv.innerHTML = `
-                <span class="small fw-bold text-dark"><i data-lucide="layers" size="16" class="me-1"></i> ${taskContainers.length} Görev Planı Hazır</span>
+                <span class="small fw-bold text-dark"><i data-lucide="zap" size="16" class="me-1"></i> ${actionContainers.length} AI İşlemi Hazır</span>
                 <div class="d-flex gap-2">
                     <button class="btn-approval btn-approve py-1 px-3 batch-approve-btn">
-                        <i data-lucide="check" size="14"></i> Tümünü Onayla
+                        <i data-lucide="check" size="14"></i> Onayla
                     </button>
                     <button class="btn-approval btn-reject py-1 px-3 batch-reject-btn">
                         <i data-lucide="x" size="14"></i> Reddet
@@ -582,30 +593,35 @@
                 
                 try {
                     let successCount = 0;
-                    for (let cmdJsonStr of taskContainers.map(t => t.cmdData)) {
+                    for (let cmdJsonStr of actionContainers.map(t => t.cmdData)) {
                         const res = await fetch('/Dashboard/ExecuteAiCommand', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
                             body: cmdJsonStr
                         });
                         const data = await res.json();
-                        if (data.success) successCount++;
+                        if (data.success) {
+                            successCount++;
+                            window.showToast?.(data.message || "İşlem başarılı.", "success");
+                        } else {
+                            window.showToast?.(data.message || "Bir işlem başarısız oldu.", "error");
+                        }
                     }
                     
-                    container.innerHTML = `<span class="text-success small fw-bold"><i data-lucide="check-circle" size="14"></i> ${successCount} Görev Takvime Eklendi</span>`;
+                    container.innerHTML = `<span class="text-success small fw-bold"><i data-lucide="check-circle" size="14"></i> ${successCount} İşlem Tamamlandı</span>`;
                     lucide.createIcons();
                 } catch (e) {
                     alert('Hata: ' + e.message);
                     this.disabled = false;
                     btnReject.disabled = false;
-                    this.innerHTML = '<i data-lucide="check" size="14"></i> Tümünü Onayla';
+                    this.innerHTML = '<i data-lucide="check" size="14"></i> Onayla';
                     lucide.createIcons();
                 }
             });
             
             btnReject.addEventListener('click', function() {
                 const container = this.closest('.batch-approval-container');
-                container.innerHTML = `<span class="text-muted small italic"><i data-lucide="info" size="14"></i> Plan reddedildi.</span>`;
+                container.innerHTML = `<span class="text-muted small italic"><i data-lucide="info" size="14"></i> İşlem reddedildi.</span>`;
                 lucide.createIcons();
             });
 
@@ -910,6 +926,21 @@
                 if(typingIndicator) typingIndicator.classList.add('d-none');
                 if(sendBtn) sendBtn.disabled = false;
             }
+    }
+
+    // ── Render historical messages (AFTER all functions are defined) ──
+    if (chatMessages) {
+        document.querySelectorAll('.server-rendered-md').forEach(el => {
+            try {
+                const decodedRaw = el.textContent;
+                const mdDiv = el.nextElementSibling;
+                if (mdDiv) {
+                    mdDiv.innerHTML = marked.parse(decodedRaw);
+                    renderCommandButtons(mdDiv);
+                }
+            } catch(e) { console.warn('Markdown parse error:', e); }
+        });
+        chatMessages.scrollTop = chatMessages.scrollHeight;
     }
 
     // (Event listeners moved to the top of script to guarantee attachment)

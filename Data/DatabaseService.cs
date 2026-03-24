@@ -66,6 +66,24 @@ public class DatabaseService
         }
     }
 
+    public async Task ToggleTaskCompleteAsync(string id, bool isCompleted)
+    {
+        var userId = GetCurrentUserId();
+        var existing = await _context.TaskItems.FirstOrDefaultAsync(t => t.Id == id && t.UserId == userId);
+        if (existing != null)
+        {
+            bool wasCompleted = existing.IsCompleted;
+            existing.IsCompleted = isCompleted;
+            
+            await _context.SaveChangesAsync();
+            
+            if (isCompleted && !wasCompleted)
+            {
+                await UpdateStreakOnTaskCompleteAsync();
+            }
+        }
+    }
+
     public async Task DeleteTaskAsync(string id)
     {
         var userId = GetCurrentUserId();
@@ -73,6 +91,21 @@ public class DatabaseService
         if (task != null)
         {
             _context.TaskItems.Remove(task);
+            await _context.SaveChangesAsync();
+        }
+    }
+
+    public async Task DeleteTasksInRangeAsync(DateTime start, DateTime end)
+    {
+        var userId = GetCurrentUserId();
+        var endOfDay = end.Date.AddDays(1).AddTicks(-1);
+        var tasks = await _context.TaskItems
+            .Where(t => t.UserId == userId && t.DueDate >= start.Date && t.DueDate <= endOfDay)
+            .ToListAsync();
+        
+        if (tasks.Any())
+        {
+            _context.TaskItems.RemoveRange(tasks);
             await _context.SaveChangesAsync();
         }
     }
