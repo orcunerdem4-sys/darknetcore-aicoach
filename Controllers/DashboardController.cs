@@ -73,19 +73,20 @@ public class DashboardController : Controller
         return Json(new { success = true });
     }
 
-    [HttpPost]
-    public async Task<IActionResult> ToggleTaskComplete([FromBody] TaskItem taskUpdate)
+    public class TaskToggleRequest
     {
-        var tasks = await _dataService.GetTasksAsync();
-        var existingTask = tasks.FirstOrDefault(t => t.Id == taskUpdate.Id);
-        
-        if (existingTask != null)
-        {
-            existingTask.IsCompleted = taskUpdate.IsCompleted;
-            await _dataService.UpdateTaskAsync(existingTask);
-            return Json(new { success = true });
-        }
-        return Json(new { success = false });
+        public string Id { get; set; } = string.Empty;
+        public bool IsCompleted { get; set; }
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> ToggleTaskComplete([FromBody] TaskToggleRequest taskUpdate)
+    {
+        if (string.IsNullOrEmpty(taskUpdate?.Id))
+            return Json(new { success = false });
+
+        await _dataService.ToggleTaskCompleteAsync(taskUpdate.Id, taskUpdate.IsCompleted);
+        return Json(new { success = true });
     }
 
     [HttpPost]
@@ -247,7 +248,7 @@ public class DashboardController : Controller
             };
 
             // Call Gemini to analyze metadata + content
-            var geminiResult = await _geminiService.AnalyzeFileMetadataAsync(fileName, extension);
+            var geminiResult = await _geminiService.AnalyzeFileMetadataAsync(fileName, extension, analysis, filePath);
             if (geminiResult != null)
             {
                 uploadedFile.Topic = geminiResult.Topic;
@@ -335,7 +336,7 @@ public class DashboardController : Controller
             UploadDate = DateTime.UtcNow
         };
 
-        var geminiResult = await _geminiService.AnalyzeFileMetadataAsync(fileName, extension, analysis);
+        var geminiResult = await _geminiService.AnalyzeFileMetadataAsync(fileName, extension, analysis, filePath);
         if (geminiResult != null)
         {
             uploadedFile.Topic = geminiResult.Topic;
@@ -453,17 +454,27 @@ public class DashboardController : Controller
             foreach (var sheet in workbook.Worksheets)
             {
                 sb.AppendLine($"=== Sayfa: {sheet.Name} ===");
-                var rows = sheet.RangeUsed()?.RowsUsed()?.Take(500);
+                var rows = sheet.RangeUsed()?.RowsUsed()?.Take(500)?.ToList();
                 if (rows == null || !rows.Any()) { sb.AppendLine("(boş sayfa)"); continue; }
 
                 var maxCol = sheet.LastColumnUsed()?.ColumnNumber() ?? 15;
-
-                // Create Markdown Table Header
-                var headers = new List<string> { "Satır" };
-                for (int i = 1; i <= maxCol; i++)
+                
+                // Track which (row, col) positions are NOT the top-left of their merged range
+                // so we can emit a "-" (empty) for continuation cells instead of repeating the value.
+                var duplicateMergedCells = new HashSet<(int row, int col)>();
+                foreach (var mergedRange in sheet.MergedRanges)
                 {
-                    headers.Add(sheet.Column(i).ColumnLetter());
+                    bool first = true;
+                    foreach (var cell in mergedRange.Cells())
+                    {
+                        if (first) { first = false; continue; }
+                        duplicateMergedCells.Add((cell.Address.RowNumber, cell.Address.ColumnNumber));
+                    }
                 }
+
+                // Emit a header row with column letters
+                var headers = new List<string> { "Satır" };
+                for (int i = 1; i <= maxCol; i++) headers.Add(sheet.Column(i).ColumnLetter());
                 sb.AppendLine("| " + string.Join(" | ", headers) + " |");
                 sb.AppendLine("|-" + string.Join("-|-", headers.Select(h => new string('-', Math.Max(h.Length, 3)))) + "-|");
 
@@ -472,35 +483,29 @@ public class DashboardController : Controller
                     var rowData = new List<string>();
                     for (int i = 1; i <= maxCol; i++)
                     {
-                        var cell = row.Cell(i);
-                        string val = "";
-                        
-                        if (cell.IsMerged()) 
+                        // If this cell is a continuation of a merged region, output empty
+                        if (duplicateMergedCells.Contains((row.RowNumber(), i)))
                         {
-                            var mergedRange = cell.MergedRange();
-                            if (mergedRange != null) {
-                                val = mergedRange.FirstCell().GetFormattedString()?.Trim() ?? "";
-                            }
-                        } 
-                        else 
-                        {
-                            val = cell.GetFormattedString()?.Trim() ?? "";
+                            rowData.Add("");
+                            continue;
                         }
                         
+                        var cell = row.Cell(i);
+                        string val = cell.GetFormattedString()?.Trim() ?? "";
+
                         // Clean values so they don't break the markdown table format
                         val = val.Replace("\r\n", " ").Replace("\n", " ").Replace("\r", "").Replace("|", "-");
-                        rowData.Add(string.IsNullOrEmpty(val) ? "-" : val);
+                        rowData.Add(val);
                     }
-                    
-                    if (rowData.All(x => x == "-")) continue; // Skip completely empty rows seamlessly
-                    
+
+                    if (rowData.All(x => string.IsNullOrEmpty(x))) continue; // Skip completely empty rows
+
                     sb.AppendLine($"| {row.RowNumber()} | " + string.Join(" | ", rowData) + " |");
                 }
                 sb.AppendLine();
             }
 
             var result = sb.ToString();
-            // Limit to 200000 chars to avoid token overflow
             return result.Length > 200000 ? result[..200000] + "\n...(devamı kısaltıldı)" : result;
         }
         catch (Exception ex)
@@ -882,37 +887,25 @@ public class DashboardController : Controller
 
         string actionPerformed = "";
 
-        // Parse ALL AI JSON Commands (loop through every ```json block)
-        var searchFrom = 0;
-        while (true)
+        int placeholderIndex = 0;
+        var placeholders = new Dictionary<string, string>();
+
+        var codeBlockRegex = new System.Text.RegularExpressions.Regex(@"```(?:json)?\s*(\{.*?\})\s*```", System.Text.RegularExpressions.RegexOptions.Singleline | System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+        responseText = codeBlockRegex.Replace(responseText, match => 
         {
-            var jsonStart = responseText.IndexOf("```json", searchFrom);
-            if (jsonStart == -1) break;
-
-            var contentStart = jsonStart + 7;
-            var jsonEnd = responseText.IndexOf("```", contentStart);
-            if (jsonEnd == -1) break;
-            var jsonStr = responseText.Substring(contentStart, jsonEnd - contentStart).Trim();
-
-            try
-            {
+            var jsonStr = match.Groups[1].Value.Trim();
+            try {
                 using var doc = System.Text.Json.JsonDocument.Parse(jsonStr);
-                var root = doc.RootElement;
-                if (root.TryGetProperty("command", out var cmdProp))
-                {
-                    var cmdType = cmdProp.GetString();
-                    if (cmdType == "add_task")
-                    {
-                        actionPerformed = "requires_approval:add_task";
-                    }
-                }
-            }
-            catch (Exception) { }
+                var key = $"__AI_CMD_{placeholderIndex++}__";
+                placeholders[key] = $"<div class='ai-command-container' data-command='{jsonStr.Replace("'", "&apos;").Replace("<", "&lt;").Replace(">", "&gt;")}'></div>";
+                return key;
+            } catch { return match.Value; }
+        });
 
-            var fullBlock = responseText.Substring(jsonStart, (jsonEnd + 3) - jsonStart);
-            var replacement = $"<div class='ai-command-container' data-command='{jsonStr.Replace("'", "&apos;")}'></div>";
-            responseText = responseText.Replace(fullBlock, replacement).Trim();
-            searchFrom = jsonStart + replacement.Length;
+        // Restore placeholders
+        foreach (var kvp in placeholders)
+        {
+            responseText = responseText.Replace(kvp.Key, kvp.Value);
         }
 
         // Save assistant response to DB
@@ -992,6 +985,27 @@ public class DashboardController : Controller
                         return Json(new { success = true, message = $"{addedCount} adet ders toplu olarak başarıyla eklendi!" });
                     }
                 }
+                else if (cmd == "update_task")
+                {
+                    var taskId = root.TryGetProperty("taskId", out var tidProp) ? tidProp.GetString() : null;
+                    if (!string.IsNullOrEmpty(taskId))
+                    {
+                        var tasks = await _dataService.GetTasksAsync();
+                        var task = tasks.FirstOrDefault(t => t.Id == taskId);
+                        if (task != null)
+                        {
+                            if (root.TryGetProperty("date", out var dProp) && DateTime.TryParse(dProp.GetString(), out var d))
+                                task.DueDate = d.ToUniversalTime();
+                            if (root.TryGetProperty("title", out var tProp) && !string.IsNullOrEmpty(tProp.GetString()))
+                                task.Title = tProp.GetString()!;
+                            if (root.TryGetProperty("durationHours", out var durProp))
+                                task.DurationHours = durProp.GetDouble();
+                            await _dataService.UpdateTaskAsync(task);
+                            return Json(new { success = true, message = "Görev başarıyla güncellendi!" });
+                        }
+                        return Json(new { success = false, message = "Görev bulunamadı." });
+                    }
+                }
                 else if (cmd == "delete_tasks_batch")
                 {
                     if (root.TryGetProperty("taskIds", out var taskIdsArray))
@@ -1017,6 +1031,18 @@ public class DashboardController : Controller
                         await _dataService.DeleteTaskAsync(t.Id);
                     }
                     return Json(new { success = true, message = $"Sistemdeki tüm AI ve manuel görevler ({deletedCount} adet) tamamen sıfırlandı!" });
+                }
+                else if (cmd == "delete_tasks_date_range")
+                {
+                    var startDateStr = root.TryGetProperty("startDate", out var sd) ? sd.GetString() : null;
+                    var endDateStr = root.TryGetProperty("endDate", out var ed) ? ed.GetString() : null;
+                    
+                    if (DateTime.TryParse(startDateStr, out var start) && DateTime.TryParse(endDateStr, out var end))
+                    {
+                        await _dataService.DeleteTasksInRangeAsync(start, end);
+                        return Json(new { success = true, message = $"{start:dd MMM} - {end:dd MMM} arasındaki tüm görevler başarıyla silindi!" });
+                    }
+                    return Json(new { success = false, message = "Geçersiz tarih formatı." });
                 }
             }
         }
